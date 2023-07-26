@@ -1,16 +1,23 @@
 # newtab.txt
 
+<table>
+<tbody>
+<tr>
+<td><a href="https://newtab.adithya.zip/" target="_blank">> product page</a></td></tr>
+</tbody>
+</table>
+
+
 an ultra simple and lightweight product that i’ve built where you can just write shit down in the new tab. \
 works on basically any browser and without an internet connection.
-
-![image](https://media.discordapp.net/attachments/752463623305297992/1133835373953433720/256336257-e11b887f-c00a-49a2-98bf-737d57b918f2.png)
 
 <table>
 <tbody>
 <tr>
-<td>↓ chrome/edge/etc install</td>
-<td><a href="https://addons.mozilla.org/en-GB/firefox/addon/newtab-txt" target="_blank">firefox install</a></td>
-<td><a href="http://newtab.adithya.zip/" target="_blank">product page</a></td>
+  <td><a href="https://addons.mozilla.org/en-GB/firefox/addon/newtab-txt" target="_blank">firefox install</a></td>
+  <td> or </td>
+<td>chrome/edge/etc install ▼ </td>
+
 </tr>
 </tbody>
 </table>
