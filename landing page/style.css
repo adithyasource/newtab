@@ -3,7 +3,11 @@
   src: url(AppleGaramond.ttf);
 }
 
-html * {
+html {
+  scroll-behavior: smooth;
+}
+
+* {
   font-family: AppleGaramond;
 }
 
