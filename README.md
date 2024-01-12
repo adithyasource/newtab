@@ -29,4 +29,13 @@ works on basically any browser and without an internet connection.
 
 do let me know of any bugs and i'd love to work on fixing them
 
-dependencies: uses [fileSaver.js](https://github.com/eligrey/FileSaver.js) locally
+## Acknowledgments
+
+<table>
+<tbody>
+<tr>
+<td><b>Libraries</b></td>
+<td><a href="https://github.com/eligrey/FileSaver.js" target="_blank">fileSaver.js (offline)</a></td>
+</tr>
+</tbody>
+</table>
