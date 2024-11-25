@@ -14,28 +14,22 @@ works on basically any browser and without an internet connection.
 <table>
 <tbody>
 <tr>
-  <td><a href="https://addons.mozilla.org/en-GB/firefox/addon/newtab-txt" target="_blank">firefox install</a></td>
-  <td> or </td>
-<td>chrome/edge/etc install ▼ </td>
-
+  <td><a href="https://chromewebstore.google.com/detail/newtabtxt/fkockicclbflhmecobbdfejhmhgddkaf" target="_blank">chromium (chrome, edge, arc, opera)</a></td>
+  <td><a href="https://addons.mozilla.org/en-GB/firefox/addon/newtab-txt" target="_blank">firefox</a></td>
 </tr>
 </tbody>
 </table>
 
-1. download the latest .zip from the [releases page](https://github.com/adithyasource/newtab.txt/releases)
-2. go to the extensions page in your browser (chrome://extensions or edge://extensions or opera://extensions)
-3. turn on developer mode in the top right corner
-4. drag and drop that .zip
+![image](https://github.com/user-attachments/assets/28cb453f-9ad2-4908-a4da-1ca2dec5abd7)
 
 do let me know of any bugs and i'd love to work on fixing them
 
-## Acknowledgments
-
+## acknowledgments
 <table>
 <tbody>
 <tr>
-<td><b>Libraries</b></td>
-<td><a href="https://github.com/eligrey/FileSaver.js" target="_blank">fileSaver.js (offline)</a></td>
+<td><b>libraries</b></td>
+<td><a href="https://github.com/eligrey/FileSaver.js" target="_blank">fileSaver.js</a></td>
 </tr>
 </tbody>
 </table>
