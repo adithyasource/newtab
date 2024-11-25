@@ -17,8 +17,10 @@ body {
   justify-content: center;
 }
 
-p {
-  font-size: 28px;
+p,
+span,
+a {
+  font-size: 24px;
   font-family: AppleGaramond;
 }
 
@@ -65,28 +67,53 @@ a {
   color: inherit;
 }
 
+
+#download {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+#download p {
+  margin: 0;
+}
+
 @media only screen and (max-width: 1158px) {
   #mainDiv {
     width: 80vw;
   }
+
   p {
     font-size: 24px;
   }
+
 }
 
 @media only screen and (max-width: 800px) {
   #backToTop {
     display: none !important;
   }
+
   #bottomElements {
     flex-direction: column;
   }
+
   #cropDiv {
     width: 110%;
     overflow: hidden;
   }
+
   #mainImage {
     width: 180%;
+  }
+
+  #download {
+    flex-direction: column;
+  }
+
+  #downloadOptions {
+    display: flex;
+    flex-direction: column;
   }
 }
 
