@@ -113,7 +113,9 @@ button {
   margin-bottom: -0.4vh;
 }
 
-#madeby, #coffee, #text {
+#madeby,
+#coffee,
+#text {
   cursor: auto;
 }
 
@@ -134,15 +136,24 @@ button {
 }
 
 @keyframes in {
-  from {left: -17em;
-  opacity: 0%;}
+  from {
+    left: -17em;
+    opacity: 0%;
+  }
 
-  to {left: 0em;
-  opacity: 100%;}
+  to {
+    left: 0em;
+    opacity: 100%;
+  }
 }
 
 @keyframes out {
-  from {left: 0px;}
-  to {left: -17em;
-  opacity: 0;}
+  from {
+    left: 0px;
+  }
+
+  to {
+    left: -17em;
+    opacity: 0;
+  }
 }
