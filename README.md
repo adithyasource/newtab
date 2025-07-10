@@ -1,4 +1,4 @@
-# newtab.txt
+# newtab
 
 <table>
 <tbody>
