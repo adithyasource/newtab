@@ -1,10 +1,6 @@
 * {
   letter-spacing: -0.04em;
-  font-size: 1em;
-}
-
-body {
-  font-family: "Times New Roman";
+  font-size: 1.25rem;
 }
 
 a {
@@ -14,10 +10,8 @@ a {
 #textarea {
   width: calc(100vw - 4em);
   height: calc(100vh - 2em);
-  font-size: 2em;
   color: black;
   padding-left: 1em;
-
   padding-top: 0em;
   margin: none;
   border: none;
@@ -51,7 +45,7 @@ button {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  height: 15em;
+  height: 10em;
   width: 17em;
   animation-name: none;
   animation-duration: 0.1s;
@@ -59,8 +53,8 @@ button {
 }
 
 .fontsidebar {
-  top: 5.4em;
-  left: 17.5em;
+  top: 3.7em;
+  left: 17.3em;
   position: fixed;
   margin-top: 4vh;
   padding: 1px;
@@ -75,7 +69,6 @@ button {
 #dropdown {
   background-color: #ffffff00;
   border: none;
-  font-size: 1.5em;
   cursor: pointer;
   color: #000000;
   font-family: inherit;
@@ -93,13 +86,11 @@ button {
   height: 13em;
   position: fixed;
   margin-top: 4vh;
-  margin-top: 4vh;
 }
 
 .sidebutton {
   background-color: #ffffff00;
   border: none;
-  font-size: 1.5em;
   cursor: pointer;
   color: #000000;
 }
@@ -119,12 +110,10 @@ button {
 
 #text {
   margin-top: -0.2vh;
-  font-size: 1.2em;
   opacity: 80%;
 }
 
 .text {
-  font-size: 0.8em;
   font-family: inherit;
   opacity: 80%;
 }
@@ -154,4 +143,59 @@ button {
     left: -17em;
     opacity: 0;
   }
+}
+
+.sticky-note {
+  position: absolute;
+  resize: both;
+  z-index: 9999;
+  overflow-x: hidden;
+  overflow-y: auto;
+  min-width: 150px;
+  min-height: 120px;
+}
+
+.sticky-header {
+  padding: 6px 10px;
+  height: 30px;
+  cursor: move;
+  display: flex;
+  justify-content: right;
+  align-items: right;
+  text-align: right;
+  z-index: 99999;
+  position: absolute;
+  width: 100%;
+  top: -1rem;
+  user-select: none; /* Prevent text selection on the header */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+.sticky-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  position: absolute;
+  top: 0.4rem;
+  right: 0.8rem;
+}
+
+.sticky-content {
+  width: calc(100% - 1rem);
+  height: calc(100% - 1rem);
+  border: none;
+  padding: 8px;
+  background: transparent;
+  resize: none;
+  outline: none;
+  overflow: auto;
+  position: absolute;
+  top: 0;
+}
+
+::-webkit-scrollbar {
+  display: none;
 }
