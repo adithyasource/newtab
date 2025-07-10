@@ -27,6 +27,9 @@ a {
 button {
   text-align: left;
   font-family: inherit;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
 }
 
 .sidebar {
@@ -47,6 +50,7 @@ button {
   gap: 0.5em;
   animation-name: none;
   animation-duration: 0.1s;
+  z-index: 2147483647;
 }
 
 .sidebar * {
@@ -92,8 +96,23 @@ button {
 .sidebutton {
   background-color: #ffffff00;
   border: none;
-  cursor: pointer;
   color: #000000;
+  padding-left: 6px;
+}
+
+details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+}
+
+summary {
+  cursor: pointer;
+}
+
+details p {
+  margin: 0 0 12px 0;
+  padding: 0;
 }
 
 .divider {

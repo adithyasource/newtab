@@ -274,6 +274,7 @@ function applyStickyNoteTheme(sticky) {
 }
 
 function darkUI() {
+  pageBody.style.color = "#FFFFFF";
   textArea.style.color = "#FFFFFF";
   pageBody.style.backgroundColor = "#121212";
   sideBar.style.backgroundColor = "#121212";
