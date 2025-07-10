@@ -188,14 +188,14 @@ function makeStickyDraggable(sticky) {
   let offsetY = 0;
   let debounceTimeout;
 
-  header.addEventListener("mousedown", (e) => {
+  function startDragging(e) {
     isDragging = true;
     offsetX = e.clientX - sticky.offsetLeft;
     offsetY = e.clientY - sticky.offsetTop;
     sticky.style.zIndex = ++stickyIdCounter + 10000;
-  });
+  }
 
-  document.addEventListener("mousemove", (e) => {
+  function drag(e) {
     if (isDragging) {
       sticky.style.left = `${e.clientX - offsetX}px`;
       sticky.style.top = `${e.clientY - offsetY}px`;
@@ -205,6 +205,23 @@ function makeStickyDraggable(sticky) {
         saveStickyNotes();
       }, 500);
     }
+  }
+
+  sticky.addEventListener("mousedown", (e) => {
+    sticky.style.zIndex = ++stickyIdCounter + 10000;
+    console.log(e);
+
+    if (e.ctrlKey) {
+      startDragging(e);
+    }
+  });
+
+  header.addEventListener("mousedown", (e) => {
+    startDragging(e);
+  });
+
+  document.addEventListener("mousemove", (e) => {
+    drag(e);
   });
 
   document.addEventListener("mouseup", () => {
