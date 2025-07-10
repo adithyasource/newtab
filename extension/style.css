@@ -1,6 +1,5 @@
 * {
-  letter-spacing: -0.04em;
-  font-size: 1.25rem;
+  font-size: 24px;
 }
 
 a {
@@ -26,7 +25,6 @@ a {
 }
 
 button {
-  display: block;
   text-align: left;
   font-family: inherit;
 }
@@ -45,16 +43,19 @@ button {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  height: 10em;
-  width: 17em;
+  width: 10em;
+  gap: 0.5em;
   animation-name: none;
   animation-duration: 0.1s;
-  font-size: 1em;
+}
+
+.sidebar * {
+  font-size: 16px;
 }
 
 .fontsidebar {
-  top: 3.7em;
-  left: 17.3em;
+  top: 4.2em;
+  left: 15.4em;
   position: fixed;
   margin-top: 4vh;
   padding: 1px;

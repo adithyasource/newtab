@@ -4,7 +4,7 @@
   "description": "the simplest damn notepad for your browser",
   "version": "1.1.0",
   "chrome_url_overrides": {
-    "newtab": "newpage.html"
+    "newtab": "index.html"
   },
   "icons": {
     "16": "/images/128.png",
