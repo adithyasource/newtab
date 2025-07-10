@@ -7,17 +7,15 @@ const pageBody = document.getElementById("body");
 const darkModeBtn = document.getElementById("darkmodebtn");
 const sideButton = document.querySelectorAll(".sidebutton");
 const dropDown = document.getElementById("dropdown");
-var fontTimer;
-var sidebarTimer;
 let stickyIdCounter = 0;
 let isBlur;
 let isDarkMode;
+let showStickies;
 
 function getData() {
   isBlur = JSON.parse(localStorage.getItem("isBlur"));
   if (isBlur === null) {
     isBlur = false;
-    localStorage.setItem("isBlur", false);
     localStorage.setItem("isBlur", isBlur);
   }
 
@@ -46,6 +44,21 @@ function getData() {
 
   const savedNotes = JSON.parse(localStorage.getItem("stickyNotes")) || [];
   savedNotes.forEach((note) => createStickyNote(note));
+
+  showStickies = JSON.parse(localStorage.getItem("showStickies"));
+  if (showStickies === null) {
+    showStickies = true;
+    localStorage.setItem("showStickies", showStickies);
+  }
+  if (showStickies) {
+    document.querySelectorAll(".sticky-note").forEach((el) => {
+      el.style.visibility = "visible";
+    });
+  } else {
+    document.querySelectorAll(".sticky-note").forEach((el) => {
+      el.style.visibility = "hidden";
+    });
+  }
 
   let fontIndex = localStorage.getItem("fontIndex");
   console.log(fontIndex);
@@ -105,7 +118,7 @@ function attachEventListeners() {
     sideBar.style.animationName = "in";
 
     hoverChecker.style.width = "40vw";
-    hoverChecker.style.height = "10em";
+    hoverChecker.style.height = "13em";
   });
 
   hoverChecker.addEventListener("mouseleave", () => {
@@ -376,7 +389,28 @@ function main() {
 
         if (e.key === "e") {
           e.preventDefault();
+          document.querySelectorAll(".sticky-note").forEach((el) => {
+            el.style.visibility = "visible";
+          });
+          showStickies = true;
+          localStorage.setItem("showStickies", showStickies);
           createStickyNote();
+        }
+
+        if (e.shiftKey && e.key === "E") {
+          e.preventDefault();
+          showStickies = !showStickies;
+          if (showStickies) {
+            document.querySelectorAll(".sticky-note").forEach((el) => {
+              el.style.visibility = "visible";
+            });
+          } else {
+            document.querySelectorAll(".sticky-note").forEach((el) => {
+              el.style.visibility = "hidden";
+            });
+          }
+
+          localStorage.setItem("showStickies", showStickies);
         }
       }
     });
