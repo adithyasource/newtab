@@ -131,6 +131,47 @@ function attachEventListeners() {
   });
 }
 
+function attachContentEditableEventListeners(el) {
+  el.addEventListener("paste", async (e) => {
+    e.preventDefault();
+    const items = e.clipboardData.items;
+    for (const item of items) {
+      if (item.type.indexOf("image") !== -1) {
+        const blob = item.getAsFile();
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          document.execCommand("insertImage", false, event.target.result);
+        };
+        reader.readAsDataURL(blob);
+      } else if (item.type === "text/plain") {
+        item.getAsString((text) => {
+          const html = text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/\t/g, "&emsp;")
+            .replace(/ {2}/g, "&nbsp;&nbsp;") // handles double spaces
+            .replace(/\n/g, "<br>");
+          document.execCommand("insertHTML", false, html);
+        });
+      }
+    }
+  });
+
+  el.addEventListener("keydown", (e) => {
+    if (e.key === "Tab") {
+      e.preventDefault();
+      document.execCommand("insertText", false, "\t"); // 4 spaces
+    }
+
+    if (e.ctrlKey && e.key === " ") {
+      console.log("add todo");
+      const html = `<span class="todo" style="display: block;"> lmao</span>`;
+      document.execCommand("insertHTML", true, html);
+    }
+  });
+}
+
 function createStickyNote(noteData = null) {
   stickyIdCounter++;
 
@@ -177,6 +218,8 @@ function createStickyNote(noteData = null) {
   stickyContent.addEventListener("input", () => {
     saveStickyNotes();
   });
+
+  attachContentEditableEventListeners(sticky);
 
   saveStickyNotes();
 }
@@ -353,40 +396,7 @@ function main() {
     });
 
     document.querySelectorAll("[contenteditable]").forEach((el) => {
-      el.addEventListener("keydown", (e) => {
-        if (e.key === "Tab") {
-          e.preventDefault();
-          document.execCommand("insertText", false, "\t"); // 4 spaces
-        }
-      });
-    });
-
-    document.querySelectorAll("[contenteditable]").forEach((el) => {
-      el.addEventListener("paste", async (e) => {
-        e.preventDefault();
-        const items = e.clipboardData.items;
-        for (const item of items) {
-          if (item.type.indexOf("image") !== -1) {
-            const blob = item.getAsFile();
-            const reader = new FileReader();
-            reader.onload = (event) => {
-              document.execCommand("insertImage", false, event.target.result);
-            };
-            reader.readAsDataURL(blob);
-          } else if (item.type === "text/plain") {
-            item.getAsString((text) => {
-              const html = text
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/\t/g, "&emsp;")
-                .replace(/ {2}/g, "&nbsp;&nbsp;") // handles double spaces
-                .replace(/\n/g, "<br>");
-              document.execCommand("insertHTML", false, html);
-            });
-          }
-        }
-      });
+      attachContentEditableEventListeners(el);
     });
 
     // keyboard shortcuts
