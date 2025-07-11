@@ -6,6 +6,7 @@ const changeFont = document.getElementById("changefont");
 const pageBody = document.getElementById("body");
 const darkModeBtn = document.getElementById("darkmodebtn");
 const sideButton = document.querySelectorAll(".sidebutton");
+const todoCheck = document.querySelectorAll(".todo-check");
 const dropDown = document.getElementById("dropdown");
 let stickyIdCounter = 0;
 let isBlur;
@@ -166,8 +167,39 @@ function attachContentEditableEventListeners(el) {
 
     if (e.ctrlKey && e.key === " ") {
       console.log("add todo");
-      const html = `<span class="todo" style="display: block;"> lmao</span>`;
-      document.execCommand("insertHTML", true, html);
+
+      const todoId = generateRandomString();
+
+      const span = document.createElement("span");
+      span.className = "todo";
+      span.style.display = "block";
+
+      const button = document.createElement("button");
+      button.className = "todo-check";
+      button.contentEditable = "false";
+      button.dataset.todoid = todoId;
+      button.textContent = "[ ]";
+
+      const textNode = document.createTextNode("\u200B");
+
+      span.appendChild(button);
+      span.appendChild(textNode);
+
+      const selection = window.getSelection();
+      if (!selection.rangeCount) return;
+
+      const range = selection.getRangeAt(0);
+      range.deleteContents();
+      range.insertNode(span);
+
+      range.setStartAfter(textNode);
+      range.setEndAfter(textNode);
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      setTimeout(() => {
+        attachTodoEventListeners(document.querySelector(`[data-todoid="${todoId}"]`));
+      }, 10);
     }
   });
 }
@@ -219,9 +251,23 @@ function createStickyNote(noteData = null) {
     saveStickyNotes();
   });
 
-  attachContentEditableEventListeners(sticky);
-
   saveStickyNotes();
+
+  return sticky;
+}
+
+function attachTodoEventListeners(el) {
+  el.addEventListener("click", () => {
+    if (el.innerHTML === "[ ]") {
+      el.innerHTML = "[x]";
+      el.parentElement.style.opacity = "50%";
+    } else {
+      el.innerHTML = "[ ]";
+      el.parentElement.style.opacity = "100%";
+    }
+
+    saveStickyNotes();
+  });
 }
 
 function makeStickyDraggable(sticky) {
@@ -332,6 +378,10 @@ function darkUI() {
     btn.style.color = "#FFFFFF";
   });
 
+  todoCheck.forEach((btn) => {
+    btn.style.color = "#FFFFFF";
+  });
+
   document.querySelectorAll(".sticky-note").forEach((el) => {
     applyStickyNoteTheme(el);
   });
@@ -352,9 +402,25 @@ function lightUI() {
     btn.style.color = "#121212";
   });
 
+  todoCheck.forEach((btn) => {
+    btn.style.color = "#121212";
+  });
+
   document.querySelectorAll(".sticky-note").forEach((el) => {
     applyStickyNoteTheme(el);
   });
+}
+
+function generateRandomString() {
+  const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+  let result = "";
+  const charactersLength = characters.length;
+  for (let i = 0; i < 5; i++) {
+    result += characters.charAt(Math.floor(Math.random() * charactersLength));
+  }
+
+  return result;
 }
 
 // function for downloading text, courtesy of filesaver (https://github.com/eligrey/FileSaver.js)
@@ -399,6 +465,14 @@ function main() {
       attachContentEditableEventListeners(el);
     });
 
+    document.querySelectorAll(".todo-check").forEach((el) => {
+      attachTodoEventListeners(el);
+
+      if (el.innerHTML === "[x]") {
+        el.parentElement.style.opacity = "50%";
+      }
+    });
+
     // keyboard shortcuts
     document.addEventListener("keydown", (e) => {
       if (e.ctrlKey) {
@@ -422,7 +496,8 @@ function main() {
           });
           showStickies = true;
           localStorage.setItem("showStickies", showStickies);
-          createStickyNote();
+          const sticky = createStickyNote();
+          attachContentEditableEventListeners(sticky);
         }
 
         if (e.shiftKey && e.key === "E") {

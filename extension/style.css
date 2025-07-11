@@ -219,3 +219,11 @@ details p {
 ::-webkit-scrollbar {
   display: none;
 }
+
+.todo-check {
+  background-color: #ffffff00;
+  border: none;
+  padding-left: 6px;
+  color: inherit;
+  padding-right: 6px;
+}
