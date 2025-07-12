@@ -330,7 +330,7 @@ function makeStickyDraggable(sticky) {
     sticky.style.zIndex = ++stickyIdCounter + 10000;
     console.log(e);
 
-    if (e.ctrlKey) {
+    if (e.ctrlKey || e.metaKey) {
       startDragging(e);
     }
   });
