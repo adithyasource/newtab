@@ -6,7 +6,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>newtab</title>
   <link rel="stylesheet" href="style.css" />
-  <script src="FileSaver.min.js" defer></script>
   <script src="index.js" defer></script>
   <link rel="shortcut icon" type="image/x-icon" id="favicon" href="images/128-light.png" />
 </head>
@@ -16,23 +15,35 @@
 
   <div class="hoverchecker" id="hoverchecker">
     <div class="sidebar" id="sidebar">
+      <button class="sidebutton" id="blurtogglebtn">
+        blur toggle
+        <span class="text">ctrl+q</span>
+      </button>
+
       <button class="sidebutton" id="darkmodebtn">
         darkmode toggle
-        <span class="text"> alt+q</span>
+        <span class="text">ctrl+shift+q</span>
       </button>
-      <button class="sidebutton" id="downloadtxt">
-        download text
-        <span class="text"> ctrl+s</span>
-      </button>
+
       <button class="sidebutton" id="changefont">change font</button>
-      <details class="sidebutton">
-        <summary>more shortcuts</summary>
-        <p id="text">ctrl+q to blur</p>
-        <p id="text">ctrl+e for stickies</p>
-        <p id="text">ctrl+shift+e to toggle stickies</p>
-        <p id="text">click and drag top of sticky note</p>
-        <p id="text">or ctrl+click and drag sticky note</p>
-      </details>
+
+      <button class="sidebutton" id="exportdata">
+        export data
+      </button>
+
+      <button class="sidebutton" id="newstickynotebtn">
+        new sticky note
+        <span class="text">ctrl+e</span>
+      </button>
+
+      <button class="sidebutton" id="toggleshowstickiesbtn">
+        toggle show stickies
+        <span class="text">ctrl+shift+e</span>
+      </button>
+
+      <button class="sidebutton" id="text">click and drag top of sticky note</button>
+      <button class="sidebutton" id="text">or ctrl+click and drag sticky note</button>
+
       <hr class="divider" />
       <button class="sidebutton" id="madeby">
         made by

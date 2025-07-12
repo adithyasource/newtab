@@ -216,10 +216,6 @@ details p {
   top: 0;
 }
 
-::-webkit-scrollbar {
-  display: none;
-}
-
 .todo-check {
   background-color: #ffffff00;
   border: none;

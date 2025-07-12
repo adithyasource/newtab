@@ -8,6 +8,9 @@ const darkModeBtn = document.getElementById("darkmodebtn");
 const sideButton = document.querySelectorAll(".sidebutton");
 const todoCheck = document.querySelectorAll(".todo-check");
 const dropDown = document.getElementById("dropdown");
+const blurToggle = document.getElementById("blurtogglebtn");
+const newStickyNote = document.getElementById("newstickynotebtn");
+const toggleStickyNotes = document.getElementById("toggleshowstickiesbtn");
 let stickyIdCounter = 0;
 let isBlur;
 let isDarkMode;
@@ -99,7 +102,6 @@ function getData() {
 
 function attachEventListeners() {
   darkModeBtn.addEventListener("click", toggleDarkMode);
-  document.getElementById("downloadtxt").addEventListener("click", downloadTxt);
 
   // checks for any changes in the font selector and saves it to localStorage also remembers the index of that option
   dropDown.addEventListener("change", () => {
@@ -127,6 +129,18 @@ function attachEventListeners() {
   // checks if changeFont button is clicked
   changeFont.addEventListener("click", () => {
     fontSidebar.style.visibility = "visible";
+  });
+
+  blurToggle.addEventListener("click", () => {
+    toggleBlur();
+  });
+
+  newStickyNote.addEventListener("click", () => {
+    createStickyNote();
+  });
+
+  toggleStickyNotes.addEventListener("click", (e) => {
+    toggleShowStickies(e);
   });
 
   // checks if a certain part of the screen is being hovered on for a period of time and then makes the sidebar visible
@@ -439,14 +453,6 @@ function generateRandomString() {
   return result;
 }
 
-// function for downloading text, courtesy of filesaver (https://github.com/eligrey/FileSaver.js)
-function downloadTxt() {
-  var blob = new Blob([textArea.innerText], {
-    type: "text/plain;charset=utf-8",
-  });
-  saveAs(blob, "newtab.txt");
-}
-
 function toggleDarkMode() {
   isDarkMode = !isDarkMode;
   localStorage.setItem("isDarkMode", isDarkMode);
@@ -484,11 +490,6 @@ function main() {
           toggleBlur();
         }
 
-        if (e.key === "s") {
-          e.preventDefault();
-          downloadTxt();
-        }
-
         if (e.key === "e") {
           e.preventDefault();
           document.querySelectorAll(".sticky-note").forEach((el) => {
@@ -501,23 +502,27 @@ function main() {
         }
 
         if (e.shiftKey && e.key === "E") {
-          e.preventDefault();
-          showStickies = !showStickies;
-          if (showStickies) {
-            document.querySelectorAll(".sticky-note").forEach((el) => {
-              el.style.visibility = "visible";
-            });
-          } else {
-            document.querySelectorAll(".sticky-note").forEach((el) => {
-              el.style.visibility = "hidden";
-            });
-          }
-
-          localStorage.setItem("showStickies", showStickies);
+          toggleShowStickies(e);
         }
       }
     });
   });
+}
+
+function toggleShowStickies(e) {
+  e.preventDefault();
+  showStickies = !showStickies;
+  if (showStickies) {
+    document.querySelectorAll(".sticky-note").forEach((el) => {
+      el.style.visibility = "visible";
+    });
+  } else {
+    document.querySelectorAll(".sticky-note").forEach((el) => {
+      el.style.visibility = "hidden";
+    });
+  }
+
+  localStorage.setItem("showStickies", showStickies);
 }
 
 main();
