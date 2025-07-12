@@ -22,9 +22,9 @@ function getData() {
   }
 
   if (isBlur) {
-    pageBody.classList.add("blur");
+    document.querySelector("body").classList.add("blur");
   } else {
-    pageBody.classList.remove("blur");
+    document.querySelector("body").classList.remove("blur");
   }
 
   isDarkMode = JSON.parse(localStorage.getItem("isDarkMode"));
@@ -405,9 +405,9 @@ function toggleDarkMode() {
 
 function toggleBlur() {
   if (isBlur) {
-    document.querySelector("*").classList.remove("blur");
+    document.querySelector("body").classList.remove("blur");
   } else {
-    document.querySelector("*").classList.add("blur");
+    document.querySelector("body").classList.add("blur");
   }
   isBlur = !isBlur;
   localStorage.setItem("isBlur", isBlur);

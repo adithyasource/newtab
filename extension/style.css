@@ -2,6 +2,10 @@
   --scheme: light;
 }
 
+html {
+  background-color: if( style(--scheme: dark): #121212; else: #ffffff;) !important;
+}
+
 * {
   font-size: 24px;
   color: if( style(--scheme: dark): #ffffff; else: #121212;);
@@ -30,6 +34,10 @@ a {
 
 .blur {
   filter: blur(7px);
+}
+
+.blur .sticky-note {
+  transform: translate(-7px, -21px);
 }
 
 button {
