@@ -1,5 +1,14 @@
+:root {
+  --scheme: light;
+}
+
 * {
   font-size: 24px;
+  color: if( style(--scheme: dark): #ffffff; else: #121212;);
+}
+
+body {
+  background-color: if( style(--scheme: dark): #121212; else: #ffffff;) !important;
 }
 
 a {
@@ -9,16 +18,15 @@ a {
 #textarea {
   width: calc(100vw - 4em);
   height: calc(100vh - 2em);
-  color: black;
   padding-left: 1em;
   padding-top: 0em;
   margin: none;
   border: none;
   outline: none;
   resize: none;
-  background-color: #ffffff00;
   font-family: inherit;
 }
+
 
 .blur {
   filter: blur(7px);
@@ -30,7 +38,24 @@ button {
   margin: 0;
   padding: 0;
   cursor: pointer;
+  background-color: if( style(--scheme: dark): #121212; else: #ffffff;);
 }
+
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  margin: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: if( style(--scheme: dark): #424242; else: #bfbfbf;);
+  border-radius: 6px;
+}
+
 
 .sidebar {
   top: 0;
@@ -41,7 +66,8 @@ button {
   padding-bottom: 6px;
   padding-right: 5px;
   outline: 2px solid black;
-  background-color: #ffffff;
+  background-color: if( style(--scheme: dark): #121212; else: #ffffff;);
+  outline: 1.5px solid if( style(--scheme: dark): #ffffff; else: #121212;);
   visibility: hidden;
   display: flex;
   flex-direction: column;
@@ -66,16 +92,17 @@ button {
   padding-top: 4px;
   padding-bottom: 4px;
   padding-right: 5px;
-  outline: 2px solid black;
-  background-color: #ffffff;
   visibility: hidden;
+  outline: 1.5px solid if( style(--scheme: dark): #ffffff; else: #121212;);
+}
+
+select {
+  background-color: if( style(--scheme: dark): #121212; else: #ffffff;);
 }
 
 #dropdown {
-  background-color: #ffffff00;
   border: none;
   cursor: pointer;
-  color: #000000;
   font-family: inherit;
   outline: none;
 }
@@ -94,9 +121,7 @@ button {
 }
 
 .sidebutton {
-  background-color: #ffffff00;
   border: none;
-  color: #000000;
   padding-left: 6px;
 }
 
@@ -173,6 +198,8 @@ details p {
   overflow-y: auto;
   min-width: 150px;
   min-height: 120px;
+  background-color: if( style(--scheme: dark): #121212; else: #ffffff;);
+  border: 1px solid if( style(--scheme: dark): #ffffff; else: #121212;);
 }
 
 .sticky-header {
@@ -217,7 +244,6 @@ details p {
 }
 
 .todo-check {
-  background-color: #ffffff00;
   border: none;
   padding-left: 6px;
   color: inherit;

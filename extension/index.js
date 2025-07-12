@@ -5,8 +5,6 @@ const hoverChecker = document.getElementById("hoverchecker");
 const changeFont = document.getElementById("changefont");
 const pageBody = document.getElementById("body");
 const darkModeBtn = document.getElementById("darkmodebtn");
-const sideButton = document.querySelectorAll(".sidebutton");
-const todoCheck = document.querySelectorAll(".todo-check");
 const dropDown = document.getElementById("dropdown");
 const blurToggle = document.getElementById("blurtogglebtn");
 const newStickyNote = document.getElementById("newstickynotebtn");
@@ -267,7 +265,7 @@ function createStickyNote(noteData = null) {
   });
   resizeObserver.observe(sticky);
 
-  applyStickyNoteTheme(sticky);
+  // applyStickyNoteTheme(sticky);
   makeStickyDraggable(sticky);
 
   const stickyContent = sticky.querySelector(".sticky-content");
@@ -374,71 +372,12 @@ function deleteStickyNote(id) {
   localStorage.setItem("stickyNotes", JSON.stringify(filtered));
 }
 
-function applyStickyNoteTheme(sticky) {
-  const isDark = isDarkMode;
-  sticky.style.backgroundColor = isDark ? "#121212" : "#ffffff";
-  sticky.style.border = isDark ? "1px solid #ffffff" : "1px solid #121212";
-  sticky.style.color = isDark ? "#ffffff" : "#121212";
-
-  const closeBtn = sticky.querySelector(".sticky-close");
-  if (closeBtn) closeBtn.style.color = isDark ? "#ffffff" : "#121212";
-
-  const content = sticky.querySelector(".sticky-content"); // Changed from .sticky-textarea
-  if (content) {
-    content.style.backgroundColor = isDark ? "#121212" : "#ffffff";
-    content.style.color = isDark ? "#ffffff" : "#121212";
-    content.style.border = "none";
-    content.style.outline = "none";
-  }
-}
-
 function darkUI() {
-  pageBody.style.color = "#FFFFFF";
-  textArea.style.color = "#FFFFFF";
-  pageBody.style.backgroundColor = "#121212";
-  sideBar.style.backgroundColor = "#121212";
-  sideBar.style.outline = "1.5px solid white";
-
-  dropDown.style.color = "#FFFFFF";
-  dropDown.style.backgroundColor = "#121212";
-  fontSidebar.style.outline = "1.5px solid #FFFFFF";
-  fontSidebar.style.backgroundColor = "#121212";
-
-  sideButton.forEach((btn) => {
-    btn.style.color = "#FFFFFF";
-  });
-
-  todoCheck.forEach((btn) => {
-    btn.style.color = "#FFFFFF";
-  });
-
-  document.querySelectorAll(".sticky-note").forEach((el) => {
-    applyStickyNoteTheme(el);
-  });
+  document.querySelector(":root").style.setProperty("--scheme", "dark");
 }
 
 function lightUI() {
-  textArea.style.color = "#121212";
-  pageBody.style.backgroundColor = "#FFFFFF";
-  sideBar.style.backgroundColor = "#FFFFFF";
-  sideBar.style.outline = "2px solid black";
-
-  dropDown.style.color = "#121212";
-  dropDown.style.backgroundColor = "#FFFFFF";
-  fontSidebar.style.outline = "2px solid #121212";
-  fontSidebar.style.backgroundColor = "#FFFFFF";
-
-  sideButton.forEach((btn) => {
-    btn.style.color = "#121212";
-  });
-
-  todoCheck.forEach((btn) => {
-    btn.style.color = "#121212";
-  });
-
-  document.querySelectorAll(".sticky-note").forEach((el) => {
-    applyStickyNoteTheme(el);
-  });
+  document.querySelector(":root").style.setProperty("--scheme", "light");
 }
 
 function generateRandomString() {
@@ -466,9 +405,9 @@ function toggleDarkMode() {
 
 function toggleBlur() {
   if (isBlur) {
-    pageBody.classList.remove("blur");
+    document.querySelector("*").classList.remove("blur");
   } else {
-    pageBody.classList.add("blur");
+    document.querySelector("*").classList.add("blur");
   }
   isBlur = !isBlur;
   localStorage.setItem("isBlur", isBlur);
