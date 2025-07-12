@@ -79,6 +79,22 @@ function getData() {
   } else {
     favIcon.href = "/images/128.png";
   }
+
+  textArea.addEventListener("input", () => {
+    localStorage.setItem("textareaValue", textArea.innerHTML);
+  });
+
+  document.querySelectorAll("[contenteditable]").forEach((el) => {
+    attachContentEditableEventListeners(el);
+  });
+
+  document.querySelectorAll(".todo-check").forEach((el) => {
+    attachTodoEventListeners(el);
+
+    if (el.innerHTML === "[x]") {
+      el.parentElement.style.opacity = "50%";
+    }
+  });
 }
 
 function attachEventListeners() {
@@ -457,22 +473,6 @@ function main() {
   attachEventListeners();
 
   window.addEventListener("DOMContentLoaded", () => {
-    textArea.addEventListener("input", () => {
-      localStorage.setItem("textareaValue", textArea.innerHTML);
-    });
-
-    document.querySelectorAll("[contenteditable]").forEach((el) => {
-      attachContentEditableEventListeners(el);
-    });
-
-    document.querySelectorAll(".todo-check").forEach((el) => {
-      attachTodoEventListeners(el);
-
-      if (el.innerHTML === "[x]") {
-        el.parentElement.style.opacity = "50%";
-      }
-    });
-
     // keyboard shortcuts
     document.addEventListener("keydown", (e) => {
       if (e.ctrlKey) {
