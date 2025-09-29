@@ -14,6 +14,9 @@ let isBlur;
 let isDarkMode;
 let showStickies;
 
+// Track which elements have listeners attached
+const elementsWithListeners = new WeakSet();
+
 function getData() {
   isBlur = JSON.parse(localStorage.getItem("isBlur"));
   if (isBlur === null) {
@@ -86,11 +89,18 @@ function getData() {
   });
 
   document.querySelectorAll("[contenteditable]").forEach((el) => {
-    attachContentEditableEventListeners(el);
+    // Only attach listeners if not already attached
+    if (!elementsWithListeners.has(el)) {
+      attachContentEditableEventListeners(el);
+      elementsWithListeners.add(el);
+    }
   });
 
   document.querySelectorAll(".todo-check").forEach((el) => {
-    attachTodoEventListeners(el);
+    if (!elementsWithListeners.has(el)) {
+      attachTodoEventListeners(el);
+      elementsWithListeners.add(el);
+    }
 
     if (el.innerHTML === "[x]") {
       el.parentElement.style.opacity = "50%";
@@ -226,7 +236,11 @@ function attachContentEditableEventListeners(el) {
       selection.addRange(range);
 
       setTimeout(() => {
-        attachTodoEventListeners(document.querySelector(`[data-todoid="${todoId}"]`));
+        const todoEl = document.querySelector(`[data-todoid="${todoId}"]`);
+        if (todoEl && !elementsWithListeners.has(todoEl)) {
+          attachTodoEventListeners(todoEl);
+          elementsWithListeners.add(todoEl);
+        }
       }, 10);
     }
   });
@@ -277,6 +291,20 @@ function createStickyNote(noteData = null) {
 
   stickyContent.addEventListener("input", () => {
     saveStickyNotes();
+  });
+
+  // Attach listeners to the sticky content
+  if (!elementsWithListeners.has(stickyContent)) {
+    attachContentEditableEventListeners(stickyContent);
+    elementsWithListeners.add(stickyContent);
+  }
+
+  // Attach listeners to any todo checkboxes that were loaded from saved content
+  sticky.querySelectorAll(".todo-check").forEach((todoEl) => {
+    if (!elementsWithListeners.has(todoEl)) {
+      attachTodoEventListeners(todoEl);
+      elementsWithListeners.add(todoEl);
+    }
   });
 
   saveStickyNotes();
@@ -437,7 +465,6 @@ function main() {
           showStickies = true;
           localStorage.setItem("showStickies", showStickies);
           const sticky = createStickyNote();
-          attachContentEditableEventListeners(sticky);
         }
 
         if (e.shiftKey && e.key === "E") {
@@ -463,5 +490,6 @@ function toggleShowStickies(e) {
 
   localStorage.setItem("showStickies", showStickies);
 }
+
 
 main();
