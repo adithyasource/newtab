@@ -257,3 +257,7 @@ details p {
   color: inherit;
   padding-right: 6px;
 }
+
+.sticky-content img {
+  width: inherit !important;
+}

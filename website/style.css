@@ -47,10 +47,6 @@ a {
   text-align: right;
 }
 
-#listFeatures {
-  padding-top: 30px;
-}
-
 img {
   width: 100%;
 }
@@ -120,3 +116,4 @@ a {
 #backToTop {
   display: block;
 }
+
