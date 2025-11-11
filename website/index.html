@@ -1,62 +1,64 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="google-site-verification" content="gxQnZyXWYc2ObEkUku5JJJaYouLGl079XvSEvP7_85E">
+    <link rel="shortcut icon" type="image/x-icon" id="favicon">
+    <link rel="stylesheet" href="style.css">
+    <script
+      src="https://cdn.counter.dev/script.js"
+      data-id="2b931ae8-ba3b-4013-afd8-c76e86e69d6f"
+      data-utcoffset="6"
+    ></script>
+    <title>newtab</title>
+  </head>
 
-<head>
-  <meta charset="UTF-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="google-site-verification" content="gxQnZyXWYc2ObEkUku5JJJaYouLGl079XvSEvP7_85E" />
-  <link rel="shortcut icon" type="image/x-icon" id="favicon" />
-  <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.counter.dev/script.js" data-id="2b931ae8-ba3b-4013-afd8-c76e86e69d6f"
-    data-utcoffset="6"></script>
-  <title>newtab</title>
-</head>
+  <body>
+    <div id="mainDiv">
+      <p>newtab</p>
+      <p>
+        a boring browser extension for taking down notes <br>
+        works without an internet connection.
+      </p>
+      <br>
+      <br>
 
-<body>
-  <div id="mainDiv">
-    <p>newtab</p>
-    <p>
-      a boring browser extension for taking down notes <br>
-      works without an internet connection.
-    </p>
-    <br />
-    <br />
+      <div id="download">
+        <a href="https://chromewebstore.google.com/detail/newtabtxt/fkockicclbflhmecobbdfejhmhgddkaf" target="_blank">
+          download (chrome, edge, arc, opera)
+        </a>
+      </div>
 
-    <div id="download">
-      <a href="https://chromewebstore.google.com/detail/newtabtxt/fkockicclbflhmecobbdfejhmhgddkaf" target="_blank">
-        download (chrome, edge, arc, opera)
-      </a>
+      <br>
+      <br>
+
+      <span>check out the project on</span>
+      <a href="https://github.com/adithyasource/newtab/" target="_blank">github</a>
+
+      <br>
+      <br>
+
+      <div id="cropDiv">
+        <img src="main image.png" alt="product image" id="mainImage">
+      </div>
+
+      <div id="bottomElements">
+        <a href="https://adithya.zip" target="_blank" style="margin: 0px">
+          <p>made by adithya</p>
+        </a>
+
+        <a href="#" style="text-decoration: none" id="backToTop">
+          <p>↑</p>
+        </a>
+
+        <a href="https://ko-fi.com/adithyasource" target="_blank" style="margin: 0px">
+          <p>buy me a coffee</p>
+        </a>
+      </div>
     </div>
-
-    <br />
-    <br />
-
-    <span>check out the project on</span>
-    <a href="https://github.com/adithyasource/newtab/" target="_blank">github</a>
-
-    <br />
-    <br />
-
-    <div id="cropDiv">
-      <img src="main image.png" alt="product image" id="mainImage" />
-    </div>
-
-    <div id="bottomElements">
-      <a href="https://adithya.zip" target="_blank" style="margin: 0px">
-        <p>made by adithya</p>
-      </a>
-
-      <a href="#" style="text-decoration: none" id="backToTop">
-        <p>↑</p>
-      </a>
-
-      <a href="https://ko-fi.com/adithyasource" target="_blank" style="margin: 0px">
-        <p>buy me a coffee</p>
-      </a>
-    </div>
-  </div>
-  <script>
+    <script>
     var favicon = document.getElementById("favicon");
     var browserIsDark = window.matchMedia("(prefers-color-scheme: dark)");
     if (browserIsDark.matches) {
@@ -64,7 +66,6 @@
     } else {
       favicon.href = "128.png";
     }
-  </script>
-</body>
-
+    </script>
+  </body>
 </html>

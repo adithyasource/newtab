@@ -63,7 +63,6 @@ a {
   color: inherit;
 }
 
-
 #download {
   display: flex;
   align-items: flex-start;
@@ -82,7 +81,6 @@ a {
   p {
     font-size: 24px;
   }
-
 }
 
 @media only screen and (max-width: 800px) {
@@ -116,4 +114,3 @@ a {
 #backToTop {
   display: block;
 }
-

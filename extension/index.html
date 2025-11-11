@@ -1,83 +1,75 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>newtab</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="index.js" defer></script>
+    <link rel="shortcut icon" type="image/x-icon" id="favicon" href="images/128-light.png">
+  </head>
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>newtab</title>
-  <link rel="stylesheet" href="style.css" />
-  <script src="index.js" defer></script>
-  <link rel="shortcut icon" type="image/x-icon" id="favicon" href="images/128-light.png" />
-</head>
+  <body id="body">
+    <div id="blurfilter"></div>
 
-<body id="body">
-  <div id="blurfilter"></div>
+    <p contenteditable="true" id="textarea"></p>
 
-  <p contenteditable="true" id="textarea"></p>
+    <div class="hoverchecker" id="hoverchecker">
+      <div class="sidebar" id="sidebar">
+        <button class="sidebutton" id="blurtogglebtn">
+          blur toggle
+          <span class="text">ctrl+q</span>
+        </button>
 
-  <div class="hoverchecker" id="hoverchecker">
-    <div class="sidebar" id="sidebar">
-      <button class="sidebutton" id="blurtogglebtn">
-        blur toggle
-        <span class="text">ctrl+q</span>
-      </button>
+        <button class="sidebutton" id="darkmodebtn">
+          darkmode toggle
+          <span class="text">ctrl+shift+q</span>
+        </button>
 
-      <button class="sidebutton" id="darkmodebtn">
-        darkmode toggle
-        <span class="text">ctrl+shift+q</span>
-      </button>
+        <button class="sidebutton" id="changefont">change font</button>
 
-      <button class="sidebutton" id="changefont">change font</button>
+        <button class="sidebutton" id="newstickynotebtn">
+          new sticky note
+          <span class="text">ctrl+e</span>
+        </button>
 
-      <button class="sidebutton" id="newstickynotebtn">
-        new sticky note
-        <span class="text">ctrl+e</span>
-      </button>
+        <button class="sidebutton" id="toggleshowstickiesbtn">
+          toggle show stickies
+          <span class="text">ctrl+shift+e</span>
+        </button>
 
-      <button class="sidebutton" id="toggleshowstickiesbtn">
-        toggle show stickies
-        <span class="text">ctrl+shift+e</span>
-      </button>
+        <button class="sidebutton" id="text">click and drag top of sticky note</button>
+        <button class="sidebutton" id="text">or ctrl/cmd+click and drag anywhere</button>
+        <button class="sidebutton" id="text">
+          note: image storage is limited to 5mb because of browser limitations
+        </button>
 
-      <button class="sidebutton" id="text">click and drag top of sticky note</button>
-      <button class="sidebutton" id="text">or ctrl/cmd+click and drag anywhere</button>
-      <button class="sidebutton" id="text">note: image storage is limited to 5mb because of browser limitations</button>
+        <hr class="divider">
+        <button class="sidebutton" id="madeby">
+          made by
+          <a href="https://adithya.zip" target="_blank">adithya</a>
+        </button>
+        <button class="sidebutton" id="coffee">
+          <a href="https://ko-fi.com/adithyasource" target="_blank">buy me a coffee</a>
+        </button>
 
-      <hr class="divider" />
-      <button class="sidebutton" id="madeby">
-        made by
-        <a href="https://adithya.zip" target="_blank">adithya</a>
-      </button>
-      <button class="sidebutton" id="coffee">
-        <a href="https://ko-fi.com/adithyasource" target="_blank">buy me a coffee</a>
-      </button>
-
-
-      <div class="fontsidebar" id="fontsidebar">
-        <select name="font" id="dropdown" class="dropdown">
-          <option class="fontoptions" value="times new roman">
-            times new roman
-          </option>
-          <option class="fontoptions" value="arial">arial</option>
-          <option class="fontoptions" value="verdana">verdana</option>
-          <option class="fontoptions" value="lucida console">
-            lucida console
-          </option>
-          <option class="fontoptions" value="century gothic">
-            century gothic
-          </option>
-          <option class="fontoptions" value="helvetica">helvetica</option>
-          <option class="fontoptions" value="courier new">courier new</option>
-          <option class="fontoptions" value="tahoma">tahoma</option>
-          <option class="fontoptions" value="trebuchet ms">trebuchet ms</option>
-          <option class="fontoptions" value="calibri">calibri</option>
-          <option class="fontoptions" value="cambria">cambria</option>
-          <option class="fontoptions" value="ms sans serif">ms sans serif</option>
-        </select>
+        <div class="fontsidebar" id="fontsidebar">
+          <select name="font" id="dropdown" class="dropdown">
+            <option class="fontoptions" value="times new roman">times new roman</option>
+            <option class="fontoptions" value="arial">arial</option>
+            <option class="fontoptions" value="verdana">verdana</option>
+            <option class="fontoptions" value="lucida console">lucida console</option>
+            <option class="fontoptions" value="century gothic">century gothic</option>
+            <option class="fontoptions" value="helvetica">helvetica</option>
+            <option class="fontoptions" value="courier new">courier new</option>
+            <option class="fontoptions" value="tahoma">tahoma</option>
+            <option class="fontoptions" value="trebuchet ms">trebuchet ms</option>
+            <option class="fontoptions" value="calibri">calibri</option>
+            <option class="fontoptions" value="cambria">cambria</option>
+            <option class="fontoptions" value="ms sans serif">ms sans serif</option>
+          </select>
+        </div>
       </div>
     </div>
-  </div>
-
-</body>
-
+  </body>
 </html>

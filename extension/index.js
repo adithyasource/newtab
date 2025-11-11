@@ -491,5 +491,4 @@ function toggleShowStickies(e) {
   localStorage.setItem("showStickies", showStickies);
 }
 
-
 main();
