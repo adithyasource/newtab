@@ -4,7 +4,9 @@
   "description": "Backend for newtab extension",
   "main": "index.js",
   "scripts": {
-    "start": "bun run index.js"
+    "dev": "bun index.js",
+    "build": "bun build ./index.js --outdir ./dist --target bun",
+    "start": "bun ./dist/index.js"
   },
   "dependencies": {
     "@upstash/redis": "^1.28.4",
