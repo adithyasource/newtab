@@ -120,8 +120,6 @@ export default async function handler(req, res) {
       return res.status(200).json(parsed);
     }
 
-    }
-
     if (pathname === "/api/status") {
       const countKey = `user:${payload.email}:image_count`;
       const limitKey = `user:${payload.email}:image_limit`;
