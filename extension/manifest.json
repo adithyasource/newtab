@@ -4,7 +4,7 @@
   "description": "a boring browser extension for taking down notes",
   "version": "1.3",
   "permissions": ["identity", "storage"],
-  "host_permissions": ["http://localhost:3000/*", "https://newtab.adithya.com/*"],
+  "host_permissions": ["http://localhost:3000/*", "https://newtab.adithya.zip/*"],
   "chrome_url_overrides": {
     "newtab": "index.html"
   },

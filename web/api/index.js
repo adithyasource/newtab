@@ -27,12 +27,12 @@ const corsHeaders = {
   "Access-Control-Max-Age": "86400",
 };
 
-export default {
+const handler = {
   async fetch(req) {
     if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders });
 
     try {
-      const url = new URL(req.url);
+      const url = new URL(req.url, `http://${req.headers.get("host") || "localhost"}`);
 
       if (url.pathname === "/auth/google") {
         const state = url.searchParams.get("state");
@@ -96,3 +96,13 @@ export default {
     }
   }
 };
+
+if (typeof Bun !== 'undefined') {
+  Bun.serve({
+    port: 3000,
+    fetch: (req) => handler.fetch(req),
+  });
+  console.log("Server running on http://localhost:3000");
+}
+
+export default handler;

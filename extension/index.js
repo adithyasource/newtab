@@ -15,7 +15,9 @@ const App = {
 
   config: {
     STORAGE_KEY: "newtab_data",
-    CLOUD_API_ROOT: "https://newtab.adithya.zip",
+    CLOUD_API_ROOT: chrome.runtime.id === "fkockicclbflhmecobbdfejhmhgddkaf" 
+      ? "https://newtab.adithya.zip" 
+      : "http://localhost:3000",
     DEBOUNCE_DELAY: 2000,
   },
 
@@ -127,6 +129,10 @@ const App = {
     const authUrl = `${this.config.CLOUD_API_ROOT}/auth/google?state=${encodeURIComponent(redirectUrl)}`;
 
     chrome.identity.launchWebAuthFlow({ url: authUrl, interactive: true }, (urlStr) => {
+      if (chrome.runtime.lastError) {
+        console.error("Auth flow failed:", chrome.runtime.lastError.message);
+        return this.showNotification("login failed: " + chrome.runtime.lastError.message);
+      }
       if (!urlStr) return this.showNotification("login failed");
 
       const token = new URL(urlStr).searchParams.get("token");
