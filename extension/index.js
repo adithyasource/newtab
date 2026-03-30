@@ -290,7 +290,6 @@ const App = {
     const ta = document.getElementById("textarea");
     if (ta.innerHTML !== this.state.textareaValue) ta.innerHTML = this.state.textareaValue;
 
-    document.body.classList.toggle("blur", this.state.settings.isBlur);
     this.updateTheme();
     this.updateFont();
     this.updateStatsUI();
@@ -306,6 +305,12 @@ const App = {
     document.querySelectorAll(".sticky-note").forEach((el) => el.remove());
     this.state.stickyNotes.forEach((n) => this.renderStickyNote(n));
     this.updateStickyVisibility();
+
+    document.querySelector('[contenteditable="true"]').classList.toggle("blur", this.state.settings.isBlur);
+    const stickyNotes = document.querySelector(".sticky-note");
+    if (stickyNotes) {
+      stickyNotes.classList.toggle("blur", this.state.settings.isBlur);
+    }
   },
 
   updateTheme() {
@@ -426,7 +431,11 @@ const App = {
 
   toggleBlur() {
     this.state.settings.isBlur = !this.state.settings.isBlur;
-    document.body.classList.toggle("blur", this.state.settings.isBlur);
+    document.querySelector('[contenteditable="true"]').classList.toggle("blur", this.state.settings.isBlur);
+    const stickyNotes = document.querySelector(".sticky-note");
+    if (stickyNotes) {
+      stickyNotes.classList.toggle("blur", this.state.settings.isBlur);
+    }
     this.saveLocal();
   },
 
