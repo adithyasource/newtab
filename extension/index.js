@@ -19,8 +19,8 @@ const App = {
 
   config: {
     STORAGE_KEY: "newtab_data",
-    // CLOUD_API_ROOT: "http://localhost:3000",
-    CLOUD_API_ROOT: "https://newtab.adithya.zip",
+    CLOUD_API_ROOT: "http://localhost:3000",
+    // CLOUD_API_ROOT: "https://newtab.adithya.zip",
     DEBOUNCE_DELAY: 2000,
   },
 

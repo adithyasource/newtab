@@ -3,6 +3,8 @@ import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client
 import sharp from "sharp";
 import jwt from "jsonwebtoken";
 import axios from "axios";
+import formidable from "formidable";
+import fs from "node:fs/promises";
 
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL,
@@ -105,23 +107,58 @@ export default async function handler(req, res) {
     }
 
     if (pathname === "/api/upload" && req.method === "POST") {
-      // Note: req.body might not be populated for multipart/form-data by default in Vercel
-      // unless you use a library like busboy or multer.
-      // But the original code used Fetch API's req.formData() which Vercel doesn't support for standard Node req.
-      // I'll leave a comment here.
-      return res.status(501).send("upload not implemented in node function - use edge or a library");
+      const form = formidable({});
+      const [fields, files] = await form.parse(req);
+      const file = files.image?.[0];
+
+      if (!file) return res.status(400).send("no file");
+
+      const countKey = `user:${payload.email}:image_count`;
+      const limitKey = `user:${payload.email}:image_limit`;
+      const count = parseInt(await redis.get(countKey)) || 0;
+      const limit = parseInt(await redis.get(limitKey)) || 100;
+
+      if (count >= limit) {
+        return res.status(400).send("limit exceeded");
+      }
+
+      const fileBuffer = await fs.readFile(file.filepath);
+      const buf = await sharp(fileBuffer)
+        .resize(1200, 1200, { fit: "inside", withoutEnlargement: true })
+        .jpeg({ quality: 80 })
+        .toBuffer();
+
+      const name = `${payload.email}/${Date.now()}.jpg`;
+      await s3.send(new PutObjectCommand({
+        Bucket: R2_BUCKET_NAME,
+        Key: name,
+        Body: buf,
+        ContentType: "image/jpeg",
+      }));
+
+      await redis.incr(countKey);
+
+      // Clean up temp file
+      try { await fs.unlink(file.filepath); } catch (e) {}
+
+      return res.status(200).json({ url: `${R2_PUBLIC_DOMAIN}/${name}` });
     }
 
     if (pathname === "/api/delete-image" && req.method === "POST") {
-      const { url } = req.body;
-      if (!url) return res.status(400).send("missing url");
+      const { url: imageUrl } = req.body;
+      if (!imageUrl) return res.status(400).send("missing url");
 
       // Only delete if it belongs to our public domain
-      if (R2_PUBLIC_DOMAIN && url.includes(R2_PUBLIC_DOMAIN)) {
-        const fileKey = url.split("/").pop();
-        // Security: Ensure the key doesn't contain path traversal or other malicious patterns
-        // In a real app, we should also verify that this user owns this image.
-        // For now, we'll extract the key and delete it.
+      if (R2_PUBLIC_DOMAIN && imageUrl.includes(R2_PUBLIC_DOMAIN)) {
+        // Extract key from URL. Example: https://pub.domain/user@mail.com/123.jpg -> user@mail.com/123.jpg
+        const imageUrlObj = new URL(imageUrl);
+        const fileKey = imageUrlObj.pathname.startsWith("/") ? imageUrlObj.pathname.slice(1) : imageUrlObj.pathname;
+
+        // Security: Ensure the key starts with the user's email to prevent deleting other users' images
+        if (!fileKey.startsWith(`${payload.email}/`)) {
+          return res.status(403).send("forbidden");
+        }
+
         await s3.send(new DeleteObjectCommand({
           Bucket: R2_BUCKET_NAME,
           Key: fileKey,
