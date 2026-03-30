@@ -441,6 +441,81 @@ const App = {
     });
 
     el.addEventListener("keydown", (e) => {
+      if (e.target.classList.contains("delete-confirm-input")) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          const val = e.target.value.toLowerCase().trim();
+          const wrapper = e.target.closest(".delete-confirm");
+          if (val === "y") {
+            const originalHtml = wrapper.dataset.original;
+            const match = originalHtml.match(/src="([^"]+)"/);
+            if (match && match[1]) {
+              this.deleteImageFromCloud(match[1]);
+            }
+            wrapper.remove();
+            el.dispatchEvent(new Event("input"));
+          } else if (val === "n") {
+            wrapper.outerHTML = wrapper.dataset.original;
+            el.dispatchEvent(new Event("input"));
+          }
+        }
+        return;
+      }
+
+      if (e.key === "Backspace" || e.key === "Delete") {
+        const sel = window.getSelection();
+        if (sel.rangeCount > 0) {
+          const range = sel.getRangeAt(0);
+          let img = null;
+          if (range.collapsed) {
+            if (e.key === "Backspace") {
+              if (range.startOffset > 0 && range.startContainer.nodeType === Node.ELEMENT_NODE) {
+                img = range.startContainer.childNodes[range.startOffset - 1];
+              } else if (range.startOffset === 0) {
+                let prev = range.startContainer.previousSibling;
+                while (prev && prev.nodeType === Node.TEXT_NODE && !prev.textContent.trim())
+                  prev = prev.previousSibling;
+                if (prev && prev.nodeName === "IMG") img = prev;
+              }
+              if (!img && range.startContainer.nodeType === Node.TEXT_NODE && range.startOffset === 0) {
+                let prev = range.startContainer.previousSibling;
+                if (prev && prev.nodeName === "IMG") img = prev;
+              }
+            } else {
+              if (
+                range.startContainer.nodeType === Node.ELEMENT_NODE &&
+                range.startOffset < range.startContainer.childNodes.length
+              ) {
+                img = range.startContainer.childNodes[range.startOffset];
+              } else if (
+                range.startContainer.nodeType === Node.TEXT_NODE &&
+                range.startOffset === range.startContainer.length
+              ) {
+                let next = range.startContainer.nextSibling;
+                if (next && next.nodeName === "IMG") img = next;
+              }
+            }
+          } else {
+            const container = range.commonAncestorContainer;
+            if (container.nodeType === Node.ELEMENT_NODE) {
+              if (
+                range.startContainer === container &&
+                range.endContainer === container &&
+                range.startOffset + 1 === range.endOffset
+              ) {
+                img = container.childNodes[range.startOffset];
+              }
+            }
+          }
+
+          if (img && img.nodeName === "IMG") {
+            e.preventDefault();
+            this.confirmImageDeletion(img, el);
+            return;
+          }
+        }
+      }
+
       if (e.key === "Tab") {
         e.preventDefault();
         document.execCommand("insertText", false, "\t");
@@ -477,6 +552,44 @@ const App = {
     sel.removeAllRanges();
     sel.addRange(r);
     container.dispatchEvent(new Event("input"));
+  },
+
+  confirmImageDeletion(img, container) {
+    const wrapper = document.createElement("div");
+    wrapper.contentEditable = "false";
+    wrapper.className = "delete-confirm";
+    wrapper.dataset.original = img.outerHTML;
+    wrapper.style.cssText =
+      "display: inline-flex; align-items: center; gap: 8px; border: 1px solid #ccc; padding: 2px 8px; margin: 2px; border-radius: 4px; font-size: 0.8em; background: rgba(0,0,0,0.05); user-select: none; vertical-align: middle;";
+    wrapper.innerHTML = `permanently delete? <input type="text" class="delete-confirm-input" placeholder="y/n" style="width: 30px; border: 1px solid #999; background: transparent; color: inherit; font-family: inherit; font-size: inherit; outline: none; padding: 0 2px;">`;
+
+    img.parentNode.replaceChild(wrapper, img);
+    const input = wrapper.querySelector("input");
+    input.focus();
+
+    input.addEventListener("input", () => {
+      input.setAttribute("value", input.value);
+      container.dispatchEvent(new Event("input"));
+    });
+
+    container.dispatchEvent(new Event("input"));
+  },
+
+  async deleteImageFromCloud(url) {
+    if (!this.state.settings.authToken) return;
+    try {
+      await fetch(`${this.config.CLOUD_API_ROOT}/api/delete-image`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.state.settings.authToken}`,
+        },
+        body: JSON.stringify({ url }),
+      });
+      this.showNotification("image deleted from cloud");
+    } catch (e) {
+      console.error("failed to delete image from cloud", e);
+    }
   },
 };
 

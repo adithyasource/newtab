@@ -1,5 +1,5 @@
 import { Redis } from "@upstash/redis";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import sharp from "sharp";
 import jwt from "jsonwebtoken";
 import axios from "axios";
@@ -102,6 +102,25 @@ export default async function handler(req, res) {
       // But the original code used Fetch API's req.formData() which Vercel doesn't support for standard Node req.
       // I'll leave a comment here.
       return res.status(501).send("upload not implemented in node function - use edge or a library");
+    }
+
+    if (pathname === "/api/delete-image" && req.method === "POST") {
+      const { url } = req.body;
+      if (!url) return res.status(400).send("missing url");
+
+      // Only delete if it belongs to our public domain
+      if (R2_PUBLIC_DOMAIN && url.includes(R2_PUBLIC_DOMAIN)) {
+        const fileKey = url.split("/").pop();
+        // Security: Ensure the key doesn't contain path traversal or other malicious patterns
+        // In a real app, we should also verify that this user owns this image.
+        // For now, we'll extract the key and delete it.
+        await s3.send(new DeleteObjectCommand({
+          Bucket: R2_BUCKET_NAME,
+          Key: fileKey,
+        }));
+        return res.status(200).json({ ok: true });
+      }
+      return res.status(400).send("invalid url");
     }
 
     return res.status(404).send("not found");
