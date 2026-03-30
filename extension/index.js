@@ -11,10 +11,15 @@ const App = {
       authToken: "",
       userEmail: "",
     },
+    stats: {
+      count: 0,
+      limit: 100,
+    },
   },
 
   config: {
     STORAGE_KEY: "newtab_data",
+    // CLOUD_API_ROOT: "http://localhost:3000",
     CLOUD_API_ROOT: "https://newtab.adithya.zip",
     DEBOUNCE_DELAY: 2000,
   },
@@ -27,6 +32,39 @@ const App = {
 
     if (this.state.settings.authToken) {
       await this.loadCloud();
+      await this.fetchStatus();
+    }
+  },
+
+  async fetchStatus() {
+    if (!this.state.settings.authToken) return;
+    try {
+      const res = await fetch(`${this.config.CLOUD_API_ROOT}/api/status`, {
+        headers: { Authorization: `Bearer ${this.state.settings.authToken}` },
+      });
+      if (res.ok) {
+        this.state.stats = await res.json();
+        this.updateStatsUI();
+      }
+    } catch (e) {
+      console.error("failed to fetch status", e);
+    }
+  },
+
+  updateStatsUI() {
+    const statsEl = document.getElementById("image-stats");
+    const countText = document.getElementById("image-count-text");
+    const progressBar = document.getElementById("image-progress-bar");
+
+    if (this.state.settings.authToken && this.state.stats) {
+      statsEl.style.display = "flex";
+      const { count, limit } = this.state.stats;
+      countText.textContent = `${count} / ${limit}`;
+      const percent = Math.min((count / limit) * 100, 100);
+      progressBar.style.width = `${percent}%`;
+      progressBar.style.backgroundColor = percent >= 100 ? "#ff4444" : "#4CAF50";
+    } else {
+      statsEl.style.display = "none";
     }
   },
 
@@ -34,7 +72,11 @@ const App = {
     const saved = localStorage.getItem(this.config.STORAGE_KEY);
     if (saved) {
       try {
-        this.state = JSON.parse(saved);
+        const loaded = JSON.parse(saved);
+        this.state = { ...this.state, ...loaded };
+        // Deep merge settings and stats since spread is shallow
+        this.state.settings = { ...App.state.settings, ...(loaded.settings || {}) };
+        this.state.stats = { ...App.state.stats, ...(loaded.stats || {}) };
       } catch (e) {
         this.migrateOldData();
       }
@@ -153,6 +195,7 @@ const App = {
     this.state.settings.userEmail = "";
     this.saveLocal(false);
     this.applyStateToUI();
+    this.updateStatsUI();
     this.showNotification("logged out");
   },
 
@@ -172,6 +215,7 @@ const App = {
     document.body.classList.toggle("blur", this.state.settings.isBlur);
     this.updateTheme();
     this.updateFont();
+    this.updateStatsUI();
 
     const loggedIn = !!this.state.settings.authToken;
     document.getElementById("loginbtn").style.display = loggedIn ? "none" : "block";
@@ -401,6 +445,10 @@ const App = {
       const items = (e.clipboardData || e.originalEvent.clipboardData).items;
       for (const item of items) {
         if (item.type.includes("image")) {
+          if (this.state.settings.authToken && this.state.stats.count >= this.state.stats.limit) {
+            this.showNotification("image limit reached! delete some images first.");
+            continue;
+          }
           const blob = item.getAsFile();
           if (this.state.settings.authToken) {
             this.showNotification("uploading...");
@@ -416,6 +464,7 @@ const App = {
                 const { url } = await res.json();
                 document.execCommand("insertImage", false, url);
                 this.showNotification("uploaded");
+                this.fetchStatus();
               }
             } catch (err) {
               this.showNotification("upload failed");
@@ -587,6 +636,7 @@ const App = {
         body: JSON.stringify({ url }),
       });
       this.showNotification("image deleted from cloud");
+      this.fetchStatus();
     } catch (e) {
       console.error("failed to delete image from cloud", e);
     }

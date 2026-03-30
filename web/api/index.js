@@ -96,6 +96,14 @@ export default async function handler(req, res) {
       return res.status(200).json(data);
     }
 
+    if (pathname === "/api/status") {
+      const countKey = `user:${payload.email}:image_count`;
+      const limitKey = `user:${payload.email}:image_limit`;
+      const count = parseInt(await redis.get(countKey)) || 0;
+      const limit = parseInt(await redis.get(limitKey)) || 100;
+      return res.status(200).json({ count, limit });
+    }
+
     if (pathname === "/api/upload" && req.method === "POST") {
       // Note: req.body might not be populated for multipart/form-data by default in Vercel
       // unless you use a library like busboy or multer.
@@ -118,6 +126,10 @@ export default async function handler(req, res) {
           Bucket: R2_BUCKET_NAME,
           Key: fileKey,
         }));
+
+        const countKey = `user:${payload.email}:image_count`;
+        await redis.decr(countKey);
+
         return res.status(200).json({ ok: true });
       }
       return res.status(400).send("invalid url");
