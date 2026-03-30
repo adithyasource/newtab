@@ -378,9 +378,9 @@ const App = {
 
       if (k === "S") {
         e.preventDefault();
-        // saveCloud is now handled by background.js,
-        // but we can still trigger a manual save if we want by updating lastUpdated
-        this.saveLocal();
+        // Instantly push to cloud by messaging the background script
+        chrome.runtime.sendMessage({ type: "FORCE_SYNC" });
+        this.showNotification("syncing now...");
       } else if (e.ctrlKey) {
         if (e.shiftKey && k === "Q") this.toggleDarkMode();
         else if (k === "Q") this.toggleBlur();

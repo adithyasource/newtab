@@ -286,11 +286,12 @@ details p {
   position: fixed;
   bottom: 20px;
   right: 20px;
-  font-size: 14px !important;
-  padding: 4px 12px;
+  font-size: 16px !important;
+  padding: 8px 16px;
   background-color: if( style(--scheme: dark): #1c1c1c; else: #e8e8e8;);
   color: if( style(--scheme: dark): #ffffffcc; else: #000000cc;);
-  border-radius: 4px;
+  border: 1px solid if( style(--scheme: dark): rgba(255,255,255,0.4); else: rgba(0,0,0,0.4););
+  border-radius: 0px;
   opacity: 0;
   transition: opacity 0.3s ease;
   pointer-events: none;
