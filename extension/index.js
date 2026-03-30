@@ -1,494 +1,479 @@
-const textArea = document.getElementById("textarea");
-const fontSidebar = document.getElementById("fontsidebar");
-const sideBar = document.getElementById("sidebar");
-const hoverChecker = document.getElementById("hoverchecker");
-const changeFont = document.getElementById("changefont");
-const pageBody = document.getElementById("body");
-const darkModeBtn = document.getElementById("darkmodebtn");
-const dropDown = document.getElementById("dropdown");
-const blurToggle = document.getElementById("blurtogglebtn");
-const newStickyNote = document.getElementById("newstickynotebtn");
-const toggleStickyNotes = document.getElementById("toggleshowstickiesbtn");
-let stickyIdCounter = 0;
-let isBlur;
-let isDarkMode;
-let showStickies;
+const App = {
+  state: {
+    textareaValue: "",
+    stickyNotes: [],
+    lastUpdated: 0,
+    settings: {
+      isBlur: false,
+      isDarkMode: false,
+      showStickies: true,
+      fontIndex: 0,
+      authToken: "",
+      userEmail: "",
+    },
+  },
 
-// Track which elements have listeners attached
-const elementsWithListeners = new WeakSet();
+  config: {
+    STORAGE_KEY: "newtab_data",
+    CLOUD_API_ROOT: "https://newtab.adithya.zip",
+    DEBOUNCE_DELAY: 2000,
+  },
 
-function getData() {
-  isBlur = JSON.parse(localStorage.getItem("isBlur"));
-  if (isBlur === null) {
-    isBlur = false;
-    localStorage.setItem("isBlur", isBlur);
-  }
+  async init() {
+    this.loadLocal();
+    this.applyStateToUI();
+    this.setupListeners();
+    this.setupFavicon();
 
-  if (isBlur) {
-    document.querySelector("body").classList.add("blur");
-  } else {
-    document.querySelector("body").classList.remove("blur");
-  }
-
-  isDarkMode = JSON.parse(localStorage.getItem("isDarkMode"));
-  if (isDarkMode === null) {
-    isDarkMode = false;
-    localStorage.setItem("isDarkMode", false);
-    localStorage.setItem("isDarkMode", isDarkMode);
-  }
-  if (isDarkMode) {
-    darkUI();
-  } else {
-    lightUI();
-  }
-
-  textArea.innerHTML = localStorage.getItem("textareaValue");
-
-  // make sure that running get data refreshes data and doesnt add anything
-  document.querySelectorAll(".sticky-note").forEach((el) => el.remove());
-
-  const savedNotes = JSON.parse(localStorage.getItem("stickyNotes")) || [];
-  savedNotes.forEach((note) => createStickyNote(note));
-
-  showStickies = JSON.parse(localStorage.getItem("showStickies"));
-  if (showStickies === null) {
-    showStickies = true;
-    localStorage.setItem("showStickies", showStickies);
-  }
-  if (showStickies) {
-    document.querySelectorAll(".sticky-note").forEach((el) => {
-      el.style.visibility = "visible";
-    });
-  } else {
-    document.querySelectorAll(".sticky-note").forEach((el) => {
-      el.style.visibility = "hidden";
-    });
-  }
-
-  let fontIndex = localStorage.getItem("fontIndex");
-  console.log(fontIndex);
-  if (fontIndex === null) {
-    fontIndex = 0;
-  }
-  const fontLocalStorage = dropDown.options[fontIndex];
-  dropDown.selectedIndex = fontIndex;
-  document.body.style.fontFamily = fontLocalStorage.value;
-  localStorage.setItem("fontIndex", fontIndex);
-
-  // checks device color scheme and changes favicon color accordingly
-  var favIcon = document.getElementById("favicon");
-  var browserIsDark = window.matchMedia("(prefers-color-scheme: dark)");
-  if (browserIsDark.matches) {
-    favIcon.href = "/images/128-light.png";
-  } else {
-    favIcon.href = "/images/128.png";
-  }
-
-  textArea.addEventListener("input", () => {
-    localStorage.setItem("textareaValue", textArea.innerHTML);
-  });
-
-  document.querySelectorAll("[contenteditable]").forEach((el) => {
-    // Only attach listeners if not already attached
-    if (!elementsWithListeners.has(el)) {
-      attachContentEditableEventListeners(el);
-      elementsWithListeners.add(el);
+    if (this.state.settings.authToken) {
+      await this.loadCloud();
     }
-  });
+  },
 
-  document.querySelectorAll(".todo-check").forEach((el) => {
-    if (!elementsWithListeners.has(el)) {
-      attachTodoEventListeners(el);
-      elementsWithListeners.add(el);
-    }
-
-    if (el.innerHTML === "[x]") {
-      el.parentElement.style.opacity = "50%";
-    }
-  });
-}
-
-function attachEventListeners() {
-  darkModeBtn.addEventListener("click", toggleDarkMode);
-
-  // checks for any changes in the font selector and saves it to localStorage also remembers the index of that option
-  dropDown.addEventListener("change", () => {
-    const selectedOption = dropDown.options[dropDown.selectedIndex].value;
-    localStorage.setItem("fontIndex", dropDown.selectedIndex);
-    pageBody.style.fontFamily = selectedOption;
-
-    sideBar.style.animationName = "out";
-    fontSidebar.style.visibility = "hidden";
-    sideBar.style.visibility = "hidden";
-
-    hoverChecker.style.width = "1.3vw";
-    hoverChecker.style.height = "13em";
-  });
-
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") {
-      console.log("user came back");
-      getData();
-    } else {
-      console.log("user left the page");
-    }
-  });
-
-  // checks if changeFont button is clicked
-  changeFont.addEventListener("click", () => {
-    fontSidebar.style.visibility = "visible";
-  });
-
-  blurToggle.addEventListener("click", () => {
-    toggleBlur();
-  });
-
-  newStickyNote.addEventListener("click", () => {
-    createStickyNote();
-  });
-
-  toggleStickyNotes.addEventListener("click", (e) => {
-    toggleShowStickies(e);
-  });
-
-  // checks if a certain part of the screen is being hovered on for a period of time and then makes the sidebar visible
-  hoverChecker.addEventListener("mouseenter", () => {
-    sideBar.style.visibility = "visible";
-    sideBar.style.animationName = "in";
-
-    hoverChecker.style.width = "40vw";
-    hoverChecker.style.height = "13em";
-  });
-
-  hoverChecker.addEventListener("mouseleave", () => {
-    sideBar.style.animationName = "out";
-    fontSidebar.style.visibility = "hidden";
-    sideBar.style.visibility = "hidden";
-
-    hoverChecker.style.width = "1.3vw";
-    hoverChecker.style.height = "13em";
-  });
-}
-
-function attachContentEditableEventListeners(el) {
-  el.addEventListener("paste", async (e) => {
-    e.preventDefault();
-    const items = e.clipboardData.items;
-    for (const item of items) {
-      if (item.type.indexOf("image") !== -1) {
-        const blob = item.getAsFile();
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          document.execCommand("insertImage", false, event.target.result);
-        };
-        reader.readAsDataURL(blob);
-      } else if (item.type === "text/plain") {
-        item.getAsString((text) => {
-          const html = text
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/\t/g, "&emsp;")
-            .replace(/ {2}/g, "&nbsp;&nbsp;") // handles double spaces
-            .replace(/\n/g, "<br>");
-          document.execCommand("insertHTML", false, html);
-        });
+  loadLocal() {
+    const saved = localStorage.getItem(this.config.STORAGE_KEY);
+    if (saved) {
+      try {
+        this.state = JSON.parse(saved);
+      } catch (e) {
+        this.migrateOldData();
       }
-    }
-  });
-
-  el.addEventListener("keydown", (e) => {
-    if (e.key === "Tab") {
-      e.preventDefault();
-      document.execCommand("insertText", false, "\t"); // 4 spaces
-    }
-
-    if (e.ctrlKey && e.key === " ") {
-      console.log("add todo");
-
-      const todoId = generateRandomString();
-
-      const span = document.createElement("span");
-      span.className = "todo";
-      span.style.display = "block";
-
-      const button = document.createElement("button");
-      button.className = "todo-check";
-      button.contentEditable = "false";
-      button.dataset.todoid = todoId;
-      button.textContent = "[ ]";
-
-      const textNode = document.createTextNode("\u200B");
-
-      span.appendChild(button);
-      span.appendChild(textNode);
-
-      const selection = window.getSelection();
-      if (!selection.rangeCount) return;
-
-      const range = selection.getRangeAt(0);
-      range.deleteContents();
-      range.insertNode(span);
-
-      range.setStartAfter(textNode);
-      range.setEndAfter(textNode);
-      selection.removeAllRanges();
-      selection.addRange(range);
-
-      setTimeout(() => {
-        const todoEl = document.querySelector(`[data-todoid="${todoId}"]`);
-        if (todoEl && !elementsWithListeners.has(todoEl)) {
-          attachTodoEventListeners(todoEl);
-          elementsWithListeners.add(todoEl);
-        }
-      }, 10);
-    }
-  });
-}
-
-function createStickyNote(noteData = null) {
-  stickyIdCounter++;
-
-  const id = noteData?.id || `sticky-${stickyIdCounter}`;
-  const x = noteData?.left || 100 + stickyIdCounter * 20;
-  const y = noteData?.top || 100 + stickyIdCounter * 20;
-  const content = noteData?.content || "";
-
-  // Set default width and height if not defined
-  const width = noteData?.width || 400;
-  const height = noteData?.height || 300;
-
-  const sticky = document.createElement("div");
-  sticky.classList.add("sticky-note");
-  sticky.setAttribute("id", id);
-  sticky.style.left = `${x}px`;
-  sticky.style.top = `${y}px`;
-  sticky.style.width = `${width}px`;
-  sticky.style.height = `${height}px`;
-
-  sticky.innerHTML = `
-    <div class="sticky-header"></div>
-    <div class="sticky-content" contenteditable="true">${content}</div>
-    <button class="sticky-close">x</button>
-  `;
-
-  document.body.appendChild(sticky);
-
-  const resizeObserver = new ResizeObserver(() => {
-    saveStickyNotes();
-  });
-  resizeObserver.observe(sticky);
-
-  // applyStickyNoteTheme(sticky);
-  makeStickyDraggable(sticky);
-
-  const stickyContent = sticky.querySelector(".sticky-content");
-
-  sticky.querySelector(".sticky-close").addEventListener("click", () => {
-    sticky.remove();
-    deleteStickyNote(id);
-  });
-
-  stickyContent.addEventListener("input", () => {
-    saveStickyNotes();
-  });
-
-  // Attach listeners to the sticky content
-  if (!elementsWithListeners.has(stickyContent)) {
-    attachContentEditableEventListeners(stickyContent);
-    elementsWithListeners.add(stickyContent);
-  }
-
-  // Attach listeners to any todo checkboxes that were loaded from saved content
-  sticky.querySelectorAll(".todo-check").forEach((todoEl) => {
-    if (!elementsWithListeners.has(todoEl)) {
-      attachTodoEventListeners(todoEl);
-      elementsWithListeners.add(todoEl);
-    }
-  });
-
-  saveStickyNotes();
-
-  return sticky;
-}
-
-function attachTodoEventListeners(el) {
-  el.addEventListener("click", () => {
-    if (el.innerHTML === "[ ]") {
-      el.innerHTML = "[x]";
-      el.parentElement.style.opacity = "50%";
     } else {
-      el.innerHTML = "[ ]";
-      el.parentElement.style.opacity = "100%";
+      this.migrateOldData();
     }
+  },
 
-    saveStickyNotes();
-  });
-}
+  migrateOldData() {
+    this.state.textareaValue = localStorage.getItem("textareaValue") || "";
+    this.state.stickyNotes = JSON.parse(localStorage.getItem("stickyNotes")) || [];
+    this.state.settings.isBlur = JSON.parse(localStorage.getItem("isBlur")) || false;
+    this.state.settings.isDarkMode = JSON.parse(localStorage.getItem("isDarkMode")) || false;
+    this.state.settings.showStickies = JSON.parse(localStorage.getItem("showStickies")) ?? true;
+    this.state.settings.fontIndex = parseInt(localStorage.getItem("fontIndex")) || 0;
+    this.state.lastUpdated = Date.now();
+    this.saveLocal();
+  },
 
-function makeStickyDraggable(sticky) {
-  const header = sticky.querySelector(".sticky-header");
-  let isDragging = false;
-  let offsetX = 0;
-  let offsetY = 0;
-  let debounceTimeout;
+  saveLocal(showNotify = true) {
+    this.state.lastUpdated = Date.now();
+    localStorage.setItem(this.config.STORAGE_KEY, JSON.stringify(this.state));
+    if (showNotify) this.showNotification("saved locally");
+    this.saveCloudDebounced();
+  },
 
-  function startDragging(e) {
-    isDragging = true;
-    offsetX = e.clientX - sticky.offsetLeft;
-    offsetY = e.clientY - sticky.offsetTop;
-    sticky.style.zIndex = ++stickyIdCounter + 10000;
-  }
+  async loadCloud() {
+    if (!this.state.settings.authToken) return;
 
-  function drag(e) {
-    if (isDragging) {
-      sticky.style.left = `${e.clientX - offsetX}px`;
-      sticky.style.top = `${e.clientY - offsetY}px`;
+    try {
+      const res = await fetch(`${this.config.CLOUD_API_ROOT}/api/load`, {
+        headers: { Authorization: `Bearer ${this.state.settings.authToken}` },
+      });
+      if (res.ok) {
+        const cloudData = await res.json();
 
-      clearTimeout(debounceTimeout);
-      debounceTimeout = setTimeout(() => {
-        saveStickyNotes();
-      }, 500);
+        if (!cloudData || Object.keys(cloudData).length === 0) {
+          this.saveCloud();
+          return;
+        }
+
+        this.state.textareaValue = cloudData.textareaValue || "";
+        this.state.stickyNotes = cloudData.stickyNotes || [];
+        this.state.lastUpdated = cloudData.lastUpdated || Date.now();
+
+        if (cloudData.settings) {
+          const { authToken, userEmail, ...rest } = cloudData.settings;
+          this.state.settings = { ...this.state.settings, ...rest };
+        }
+
+        this.applyStateToUI();
+        localStorage.setItem(this.config.STORAGE_KEY, JSON.stringify(this.state));
+        this.showNotification("synced from cloud");
+      } else if (res.status === 401) {
+        this.logout();
+      }
+    } catch (e) {
+      console.error("cloud load failed", e);
     }
-  }
+  },
 
-  sticky.addEventListener("mousedown", (e) => {
-    sticky.style.zIndex = ++stickyIdCounter + 10000;
-    console.log(e);
+  async saveCloud() {
+    if (!this.state.settings.authToken) return;
 
-    if (e.ctrlKey || e.metaKey) {
-      startDragging(e);
+    try {
+      const res = await fetch(`${this.config.CLOUD_API_ROOT}/api/save`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.state.settings.authToken}`,
+        },
+        body: JSON.stringify(this.state),
+      });
+      if (res.ok) this.showNotification("cloud synced");
+      else if (res.status === 401) this.logout();
+    } catch (e) {
+      console.error("cloud save failed", e);
     }
-  });
+  },
 
-  header.addEventListener("mousedown", (e) => {
-    startDragging(e);
-  });
+  saveCloudDebounced() {
+    clearTimeout(this.cloudTimer);
+    this.cloudTimer = setTimeout(() => this.saveCloud(), this.config.DEBOUNCE_DELAY);
+  },
 
-  document.addEventListener("mousemove", (e) => {
-    drag(e);
-  });
+  async login() {
+    if (!chrome.identity) return alert("run this as an extension!");
 
-  document.addEventListener("mouseup", () => {
-    isDragging = false;
-  });
-}
+    const redirectUrl = chrome.identity.getRedirectURL();
+    const authUrl = `${this.config.CLOUD_API_ROOT}/auth/google?state=${encodeURIComponent(redirectUrl)}`;
 
-function saveStickyNotes() {
-  const stickies = document.querySelectorAll(".sticky-note");
-  const data = [];
+    chrome.identity.launchWebAuthFlow({ url: authUrl, interactive: true }, (urlStr) => {
+      if (!urlStr) return this.showNotification("login failed");
 
-  stickies.forEach((sticky) => {
-    const id = sticky.id;
-    const left = Number.parseInt(sticky.style.left, 10);
-    const top = Number.parseInt(sticky.style.top, 10);
-    const content = sticky.querySelector(".sticky-content").innerHTML; // Changed from .value to .innerHTML
+      const token = new URL(urlStr).searchParams.get("token");
+      if (token) {
+        this.state.settings.authToken = token;
+        try {
+          this.state.settings.userEmail = JSON.parse(atob(token.split(".")[1])).email;
+        } catch (e) {}
 
-    // Get the actual CSS width and height instead of offsetWidth/offsetHeight
-    const width = Number.parseInt(sticky.style.width, 10) || 200;
-    const height = Number.parseInt(sticky.style.height, 10) || 150;
+        this.saveLocal(false);
+        this.applyStateToUI();
+        this.loadCloud();
+        this.showNotification("logged in");
+      }
+    });
+  },
 
-    data.push({ id, left, top, content, width, height });
-  });
+  logout() {
+    this.state.settings.authToken = "";
+    this.state.settings.userEmail = "";
+    this.saveLocal(false);
+    this.applyStateToUI();
+    this.showNotification("logged out");
+  },
 
-  localStorage.setItem("stickyNotes", JSON.stringify(data));
-}
+  showNotification(msg) {
+    const el = document.getElementById("notification");
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(this.notifyTimer);
+    this.notifyTimer = setTimeout(() => el.classList.remove("show"), 2000);
+  },
 
-function deleteStickyNote(id) {
-  const stickies = JSON.parse(localStorage.getItem("stickyNotes")) || [];
-  const filtered = stickies.filter((note) => note.id !== id);
-  localStorage.setItem("stickyNotes", JSON.stringify(filtered));
-}
+  applyStateToUI() {
+    const ta = document.getElementById("textarea");
+    if (ta.innerHTML !== this.state.textareaValue) ta.innerHTML = this.state.textareaValue;
 
-function darkUI() {
-  document.querySelector(":root").style.setProperty("--scheme", "dark");
-}
+    document.body.classList.toggle("blur", this.state.settings.isBlur);
+    this.updateTheme();
+    this.updateFont();
 
-function lightUI() {
-  document.querySelector(":root").style.setProperty("--scheme", "light");
-}
+    const loggedIn = !!this.state.settings.authToken;
+    document.getElementById("loginbtn").style.display = loggedIn ? "none" : "block";
+    document.getElementById("logoutbtn").style.display = loggedIn ? "block" : "none";
 
-function generateRandomString() {
-  const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    const ui = document.getElementById("userinfo");
+    ui.style.display = loggedIn ? "block" : "none";
+    ui.textContent = loggedIn ? `hi ${this.state.settings.userEmail}` : "";
 
-  let result = "";
-  const charactersLength = characters.length;
-  for (let i = 0; i < 5; i++) {
-    result += characters.charAt(Math.floor(Math.random() * charactersLength));
-  }
+    document.querySelectorAll(".sticky-note").forEach((el) => el.remove());
+    this.state.stickyNotes.forEach((n) => this.renderStickyNote(n));
+    this.updateStickyVisibility();
+  },
 
-  return result;
-}
+  updateTheme() {
+    const mode = this.state.settings.isDarkMode ? "dark" : "light";
+    document.documentElement.style.setProperty("--scheme", mode);
+  },
 
-function toggleDarkMode() {
-  isDarkMode = !isDarkMode;
-  localStorage.setItem("isDarkMode", isDarkMode);
+  updateFont() {
+    const dd = document.getElementById("dropdown");
+    const idx = this.state.settings.fontIndex;
+    if (dd?.options[idx]) {
+      dd.selectedIndex = idx;
+      document.body.style.fontFamily = dd.options[idx].value;
+    }
+  },
 
-  if (isDarkMode) {
-    darkUI();
-  } else {
-    lightUI();
-  }
-}
+  updateStickyVisibility() {
+    const v = this.state.settings.showStickies ? "visible" : "hidden";
+    document.querySelectorAll(".sticky-note").forEach((el) => (el.style.visibility = v));
+  },
 
-function toggleBlur() {
-  if (isBlur) {
-    document.querySelector("body").classList.remove("blur");
-  } else {
-    document.querySelector("body").classList.add("blur");
-  }
-  isBlur = !isBlur;
-  localStorage.setItem("isBlur", isBlur);
-}
+  setupFavicon() {
+    const el = document.getElementById("favicon");
+    if (!el) return;
+    const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    el.href = isDark ? "images/128-light.png" : "images/128.png";
+  },
 
-function main() {
-  getData();
-  attachEventListeners();
+  setupListeners() {
+    const ta = document.getElementById("textarea");
+    ta.addEventListener("input", () => {
+      this.state.textareaValue = ta.innerHTML;
+      this.saveLocal();
+    });
+    this.attachEvents(ta);
 
-  window.addEventListener("DOMContentLoaded", () => {
-    // keyboard shortcuts
+    const btns = {
+      blurtogglebtn: () => this.toggleBlur(),
+      darkmodebtn: () => this.toggleDarkMode(),
+      changefont: () => (document.getElementById("fontsidebar").style.visibility = "visible"),
+      newstickynotebtn: () => this.createStickyNote(),
+      toggleshowstickiesbtn: () => this.toggleShowStickies(),
+      loginbtn: () => this.login(),
+      logoutbtn: () => this.logout(),
+    };
+
+    Object.entries(btns).forEach(([id, fn]) => document.getElementById(id).addEventListener("click", fn));
+
+    const dd = document.getElementById("dropdown");
+    dd.addEventListener("change", () => {
+      this.state.settings.fontIndex = dd.selectedIndex;
+      this.updateFont();
+      this.saveLocal();
+      this.hideSidebar();
+    });
+
+    const checker = document.getElementById("hoverchecker");
+    checker.addEventListener("mouseenter", () => {
+      const sb = document.getElementById("sidebar");
+      sb.style.visibility = "visible";
+      sb.style.animationName = "in";
+      Object.assign(checker.style, { width: "40vw", height: "13em" });
+    });
+    checker.addEventListener("mouseleave", () => this.hideSidebar());
+
     document.addEventListener("keydown", (e) => {
-      if (e.ctrlKey) {
-        if (e.shiftKey && e.key === "Q") {
-          toggleDarkMode();
-        }
+      const mod = e.ctrlKey || e.metaKey;
+      if (!mod) return;
+      const k = e.key.toUpperCase();
 
-        if (e.key === "q") {
-          toggleBlur();
-        }
-
-        if (e.key === "e") {
+      if (k === "S") {
+        e.preventDefault();
+        this.saveCloud();
+      } else if (e.ctrlKey) {
+        if (e.shiftKey && k === "Q") this.toggleDarkMode();
+        else if (k === "Q") this.toggleBlur();
+        else if (k === "E") {
           e.preventDefault();
-          document.querySelectorAll(".sticky-note").forEach((el) => {
-            el.style.visibility = "visible";
-          });
-          showStickies = true;
-          localStorage.setItem("showStickies", showStickies);
-          const sticky = createStickyNote();
-        }
-
-        if (e.shiftKey && e.key === "E") {
-          toggleShowStickies(e);
+          e.shiftKey ? this.toggleShowStickies() : this.createStickyNote();
         }
       }
     });
-  });
-}
 
-function toggleShowStickies(e) {
-  e.preventDefault();
-  showStickies = !showStickies;
-  if (showStickies) {
-    document.querySelectorAll(".sticky-note").forEach((el) => {
-      el.style.visibility = "visible";
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        this.loadLocal();
+        this.applyStateToUI();
+        this.loadCloud();
+      }
     });
-  } else {
-    document.querySelectorAll(".sticky-note").forEach((el) => {
-      el.style.visibility = "hidden";
+  },
+
+  hideSidebar() {
+    const sb = document.getElementById("sidebar");
+    const checker = document.getElementById("hoverchecker");
+    sb.style.animationName = "out";
+    sb.style.visibility = "hidden";
+    document.getElementById("fontsidebar").style.visibility = "hidden";
+    Object.assign(checker.style, { width: "1.3vw", height: "13em" });
+  },
+
+  toggleBlur() {
+    this.state.settings.isBlur = !this.state.settings.isBlur;
+    document.body.classList.toggle("blur", this.state.settings.isBlur);
+    this.saveLocal();
+  },
+
+  toggleDarkMode() {
+    this.state.settings.isDarkMode = !this.state.settings.isDarkMode;
+    this.updateTheme();
+    this.saveLocal();
+  },
+
+  toggleShowStickies() {
+    this.state.settings.showStickies = !this.state.settings.showStickies;
+    this.updateStickyVisibility();
+    this.saveLocal();
+  },
+
+  createStickyNote() {
+    const n = {
+      id: `sticky-${Date.now()}`,
+      left: 100 + ((this.state.stickyNotes.length * 20) % 200),
+      top: 100 + ((this.state.stickyNotes.length * 20) % 200),
+      width: 400,
+      height: 300,
+      content: "",
+    };
+    this.state.stickyNotes.push(n);
+    this.state.settings.showStickies = true;
+    this.renderStickyNote(n);
+    this.updateStickyVisibility();
+    this.saveLocal();
+  },
+
+  renderStickyNote(n) {
+    const el = document.createElement("div");
+    el.className = "sticky-note";
+    el.id = n.id;
+    Object.assign(el.style, {
+      left: `${n.left}px`,
+      top: `${n.top}px`,
+      width: `${n.width}px`,
+      height: `${n.height}px`,
+      visibility: this.state.settings.showStickies ? "visible" : "hidden",
     });
-  }
 
-  localStorage.setItem("showStickies", showStickies);
-}
+    el.innerHTML = `
+      <div class="sticky-header"></div>
+      <div class="sticky-content" contenteditable="true">${n.content}</div>
+      <button class="sticky-close">x</button>
+    `;
 
-main();
+    document.body.appendChild(el);
+
+    const content = el.querySelector(".sticky-content");
+    el.querySelector(".sticky-close").addEventListener("click", () => {
+      this.state.stickyNotes = this.state.stickyNotes.filter((note) => note.id !== n.id);
+      el.remove();
+      this.saveLocal();
+    });
+
+    content.addEventListener("input", () => {
+      n.content = content.innerHTML;
+      this.saveLocal();
+    });
+
+    this.attachEvents(content);
+    this.makeDraggable(el, n);
+
+    new ResizeObserver(() => {
+      const w = parseInt(el.style.width),
+        h = parseInt(el.style.height);
+      if (w !== n.width || h !== n.height) {
+        Object.assign(n, { width: w, height: h });
+        this.saveLocal();
+      }
+    }).observe(el);
+  },
+
+  makeDraggable(el, n) {
+    const h = el.querySelector(".sticky-header");
+    let dragging = false,
+      sx,
+      sy;
+
+    el.addEventListener("mousedown", (e) => {
+      if (e.target === h || e.ctrlKey || e.metaKey) {
+        dragging = true;
+        sx = e.clientX - el.offsetLeft;
+        sy = e.clientY - el.offsetTop;
+        el.style.zIndex = Date.now();
+        e.preventDefault();
+      }
+    });
+
+    document.addEventListener("mousemove", (e) => {
+      if (!dragging) return;
+      n.left = e.clientX - sx;
+      n.top = e.clientY - sy;
+      Object.assign(el.style, { left: `${n.left}px`, top: `${n.top}px` });
+    });
+
+    document.addEventListener("mouseup", () => {
+      if (dragging) {
+        dragging = false;
+        this.saveLocal();
+      }
+    });
+  },
+
+  attachEvents(el) {
+    el.addEventListener("paste", async (e) => {
+      e.preventDefault();
+      const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+      for (const item of items) {
+        if (item.type.includes("image")) {
+          const blob = item.getAsFile();
+          if (this.state.settings.authToken) {
+            this.showNotification("uploading...");
+            const fd = new FormData();
+            fd.append("image", blob);
+            try {
+              const res = await fetch(`${this.config.CLOUD_API_ROOT}/api/upload`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${this.state.settings.authToken}` },
+                body: fd,
+              });
+              if (res.ok) {
+                const { url } = await res.json();
+                document.execCommand("insertImage", false, url);
+                this.showNotification("uploaded");
+              }
+            } catch (err) {
+              this.showNotification("upload failed");
+            }
+          } else {
+            const r = new FileReader();
+            r.onload = (ev) => document.execCommand("insertImage", false, ev.target.result);
+            r.readAsDataURL(blob);
+          }
+        } else if (item.type === "text/plain") {
+          item.getAsString((t) => {
+            const html = t
+              .replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;")
+              .replace(/\t/g, "&emsp;")
+              .replace(/ {2}/g, "&nbsp;&nbsp;")
+              .replace(/\n/g, "<br>");
+            document.execCommand("insertHTML", false, html);
+          });
+        }
+      }
+    });
+
+    el.addEventListener("keydown", (e) => {
+      if (e.key === "Tab") {
+        e.preventDefault();
+        document.execCommand("insertText", false, "\t");
+      }
+      if (e.ctrlKey && e.key === " ") {
+        e.preventDefault();
+        this.insertTodo(el);
+      }
+    });
+
+    el.addEventListener("click", (e) => {
+      if (e.target.classList.contains("todo-check")) {
+        const b = e.target;
+        const done = b.textContent === "[ ]";
+        b.textContent = done ? "[x]" : "[ ]";
+        b.parentElement.style.opacity = done ? "0.5" : "1";
+        el.dispatchEvent(new Event("input"));
+      }
+    });
+  },
+
+  insertTodo(container) {
+    const s = document.createElement("span");
+    s.className = "todo";
+    s.style.display = "block";
+    s.innerHTML = `<button class="todo-check" contenteditable="false">[ ]</button>&nbsp;`;
+
+    const sel = window.getSelection();
+    if (!sel.rangeCount) return;
+    const r = sel.getRangeAt(0);
+    r.deleteContents();
+    r.insertNode(s);
+    r.setStartAfter(s);
+    sel.removeAllRanges();
+    sel.addRange(r);
+    container.dispatchEvent(new Event("input"));
+  },
+};
+
+App.init();

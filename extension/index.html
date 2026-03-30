@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" >
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" >
     <title>newtab</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css" >
     <script src="index.js" defer></script>
-    <link rel="shortcut icon" type="image/x-icon" id="favicon" href="images/128-light.png">
+    <script src="https://shoo.dev/shoo.js"></script>
+    <link rel="shortcut icon" type="image/x-icon" id="favicon" href="images/128-light.png" >
   </head>
 
   <body id="body">
@@ -44,7 +45,12 @@
           note: image storage is limited to 5mb because of browser limitations
         </button>
 
-        <hr class="divider">
+        <hr class="divider" >
+        <button class="sidebutton" id="loginbtn">login with google</button>
+        <button class="sidebutton" id="logoutbtn" style="display: none;">logout</button>
+        <div id="userinfo" class="sidebutton" style="display: none; font-size: 0.8em; opacity: 0.7;"></div>
+
+        <hr class="divider" >
         <button class="sidebutton" id="madeby">
           made by
           <a href="https://adithya.zip" target="_blank">adithya</a>
@@ -71,5 +77,6 @@
         </div>
       </div>
     </div>
+    <div id="notification" class="notification"></div>
   </body>
 </html>

@@ -261,3 +261,43 @@ details p {
 .sticky-content img {
   width: inherit !important;
 }
+
+.cloud-input {
+  width: calc(100% - 10px);
+  background: transparent;
+  outline: none;
+  font-family: inherit;
+  font-size: 14px !important;
+  color: inherit;
+  transition: filter 0.2s ease;
+}
+
+.cloud-input:not(:focus) {
+  filter: blur(5px);
+  cursor: pointer;
+}
+
+.cloud-input::placeholder {
+  color: inherit;
+  opacity: 0.5;
+}
+
+.notification {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 14px !important;
+  padding: 4px 12px;
+  background-color: if( style(--scheme: dark): #1c1c1c; else: #e8e8e8;);
+  color: if( style(--scheme: dark): #ffffffcc; else: #000000cc;);
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 2147483647;
+}
+
+.notification.show {
+  opacity: 0.8;
+}
