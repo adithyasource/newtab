@@ -45,7 +45,7 @@ async function syncEngine() {
     if (typeof cloud === "string") {
       try {
         cloud = JSON.parse(cloud);
-      } catch (e) {
+      } catch (_e) {
         cloud = {};
       }
     }

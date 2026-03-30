@@ -80,7 +80,7 @@ const App = {
             this.state = { ...this.state, ...loaded };
             this.state.settings = { ...App.state.settings, ...(loaded.settings || {}) };
             this.state.stats = { ...App.state.stats, ...(loaded.stats || {}) };
-          } catch (e) {
+          } catch (_e) {
             this.migrateOldData().then(resolve);
             return;
           }
@@ -100,14 +100,14 @@ const App = {
       try {
         const loaded = JSON.parse(saved);
         this.state = { ...this.state, ...loaded };
-      } catch (e) {}
+      } catch (_e) {}
     } else {
       this.state.textareaValue = localStorage.getItem("textareaValue") || "";
       this.state.stickyNotes = JSON.parse(localStorage.getItem("stickyNotes")) || [];
       this.state.settings.isBlur = JSON.parse(localStorage.getItem("isBlur")) || false;
       this.state.settings.isDarkMode = JSON.parse(localStorage.getItem("isDarkMode")) || false;
       this.state.settings.showStickies = JSON.parse(localStorage.getItem("showStickies")) ?? true;
-      this.state.settings.fontIndex = parseInt(localStorage.getItem("fontIndex")) || 0;
+      this.state.settings.fontIndex = Number.parseInt(localStorage.getItem("fontIndex")) || 0;
     }
     this.state.lastUpdated = Date.now();
     await this.saveLocal(false);
@@ -132,7 +132,7 @@ const App = {
       document.body.classList.remove("loading");
       if (chrome.runtime.lastError) {
         console.error("Auth flow failed:", chrome.runtime.lastError.message);
-        return this.showNotification("login failed: " + chrome.runtime.lastError.message);
+        return this.showNotification(`login failed: ${chrome.runtime.lastError.message}`);
       }
       if (!urlStr) return this.showNotification("login failed");
 
@@ -329,7 +329,9 @@ const App = {
 
   updateStickyVisibility() {
     const v = this.state.settings.showStickies ? "visible" : "hidden";
-    document.querySelectorAll(".sticky-note").forEach((el) => (el.style.visibility = v));
+    document.querySelectorAll(".sticky-note").forEach((el) => {
+      el.style.visibility = v;
+    });
   },
 
   setupFavicon() {
@@ -350,7 +352,9 @@ const App = {
     const btns = {
       blurtogglebtn: () => this.toggleBlur(),
       darkmodebtn: () => this.toggleDarkMode(),
-      changefont: () => (document.getElementById("fontsidebar").style.visibility = "visible"),
+      changefont: () => {
+        document.getElementById("fontsidebar").style.visibility = "visible";
+      },
       newstickynotebtn: () => this.createStickyNote(),
       toggleshowstickiesbtn: () => this.toggleShowStickies(),
       loginbtn: () => this.login(),
@@ -503,8 +507,8 @@ const App = {
     this.makeDraggable(el, n);
 
     new ResizeObserver(() => {
-      const w = parseInt(el.style.width),
-        h = parseInt(el.style.height);
+      const w = Number.parseInt(el.style.width);
+      const h = Number.parseInt(el.style.height);
       if (w !== n.width || h !== n.height) {
         Object.assign(n, { width: w, height: h });
         this.saveLocal();
@@ -514,9 +518,9 @@ const App = {
 
   makeDraggable(el, n) {
     const h = el.querySelector(".sticky-header");
-    let dragging = false,
-      sx,
-      sy;
+    let dragging = false;
+    let sx;
+    let sy;
 
     el.addEventListener("mousedown", (e) => {
       if (e.target === h || e.ctrlKey || e.metaKey) {
@@ -577,7 +581,7 @@ const App = {
                 const errData = await res.json().catch(() => ({}));
                 this.showNotification(errData.error || "upload failed");
               }
-            } catch (err) {
+            } catch (_err) {
               this.showNotification("upload failed");
             }
           } else {
@@ -636,7 +640,7 @@ const App = {
                 if (prev && prev.nodeName === "IMG") img = prev;
               }
               if (!img && range.startContainer.nodeType === Node.TEXT_NODE && range.startOffset === 0) {
-                let prev = range.startContainer.previousSibling;
+                const prev = range.startContainer.previousSibling;
                 if (prev && prev.nodeName === "IMG") img = prev;
               }
             } else {
@@ -649,7 +653,7 @@ const App = {
                 range.startContainer.nodeType === Node.TEXT_NODE &&
                 range.startOffset === range.startContainer.length
               ) {
-                let next = range.startContainer.nextSibling;
+                const next = range.startContainer.nextSibling;
                 if (next && next.nodeName === "IMG") img = next;
               }
             }
