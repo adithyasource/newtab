@@ -20,8 +20,7 @@ const s3 = new S3Client({
 
 const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI, JWT_SECRET, EXTENSION_ID, R2_BUCKET_NAME, R2_PUBLIC_DOMAIN } = process.env;
 
-const server = Bun.serve({
-  port: process.env.PORT || 3000,
+export default {
   async fetch(req) {
     const url = new URL(req.url);
 
@@ -80,7 +79,5 @@ const server = Bun.serve({
     }
 
     return new Response("not found", { status: 404 });
-  },
-});
-
-console.log(`running on ${server.port}`);
+  }
+};

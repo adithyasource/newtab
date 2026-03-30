@@ -2,11 +2,9 @@
   "name": "newtab-backend",
   "version": "1.0.0",
   "description": "Backend for newtab extension",
-  "main": "index.js",
+  "main": "api/index.js",
   "scripts": {
-    "dev": "bun index.js",
-    "build": "bun build ./index.js --outdir ./dist --target bun",
-    "start": "bun ./dist/index.js"
+    "dev": "bun api/index.js"
   },
   "dependencies": {
     "@upstash/redis": "^1.28.4",
