@@ -3,6 +3,7 @@ const App = {
     textareaValue: "",
     stickyNotes: [],
     lastUpdated: 0,
+    lastSyncedAt: 0,
     settings: {
       isBlur: false,
       isDarkMode: false,
@@ -25,14 +26,13 @@ const App = {
   },
 
   async init() {
-    this.loadLocal();
+    await this.loadLocal();
     this.applyStateToUI();
     this.setupListeners();
     this.setupFavicon();
 
     if (this.state.settings.authToken) {
-      await this.loadCloud();
-      await this.fetchStatus();
+      this.fetchStatus();
     }
   },
 
@@ -68,107 +68,66 @@ const App = {
     }
   },
 
-  loadLocal() {
-    const saved = localStorage.getItem(this.config.STORAGE_KEY);
+  async loadLocal() {
+    return new Promise((resolve) => {
+      chrome.storage.local.get([this.config.STORAGE_KEY], (result) => {
+        const saved = result[this.config.STORAGE_KEY];
+        if (saved) {
+          try {
+            const loaded = typeof saved === "string" ? JSON.parse(saved) : saved;
+            this.state = { ...this.state, ...loaded };
+            this.state.settings = { ...App.state.settings, ...(loaded.settings || {}) };
+            this.state.stats = { ...App.state.stats, ...(loaded.stats || {}) };
+          } catch (e) {
+            this.migrateOldData().then(resolve);
+            return;
+          }
+        } else {
+          this.migrateOldData().then(resolve);
+          return;
+        }
+        resolve();
+      });
+    });
+  },
+
+  async migrateOldData() {
+    const oldKey = "newtab_data";
+    const saved = localStorage.getItem(oldKey);
     if (saved) {
       try {
         const loaded = JSON.parse(saved);
         this.state = { ...this.state, ...loaded };
-        // Deep merge settings and stats since spread is shallow
-        this.state.settings = { ...App.state.settings, ...(loaded.settings || {}) };
-        this.state.stats = { ...App.state.stats, ...(loaded.stats || {}) };
-      } catch (e) {
-        this.migrateOldData();
-      }
+      } catch (e) {}
     } else {
-      this.migrateOldData();
+      this.state.textareaValue = localStorage.getItem("textareaValue") || "";
+      this.state.stickyNotes = JSON.parse(localStorage.getItem("stickyNotes")) || [];
+      this.state.settings.isBlur = JSON.parse(localStorage.getItem("isBlur")) || false;
+      this.state.settings.isDarkMode = JSON.parse(localStorage.getItem("isDarkMode")) || false;
+      this.state.settings.showStickies = JSON.parse(localStorage.getItem("showStickies")) ?? true;
+      this.state.settings.fontIndex = parseInt(localStorage.getItem("fontIndex")) || 0;
     }
+    this.state.lastUpdated = Date.now();
+    await this.saveLocal(false);
+    // Cleanup localStorage after migration
+    localStorage.clear();
   },
 
-  migrateOldData() {
-    this.state.textareaValue = localStorage.getItem("textareaValue") || "";
-    this.state.stickyNotes = JSON.parse(localStorage.getItem("stickyNotes")) || [];
-    this.state.settings.isBlur = JSON.parse(localStorage.getItem("isBlur")) || false;
-    this.state.settings.isDarkMode = JSON.parse(localStorage.getItem("isDarkMode")) || false;
-    this.state.settings.showStickies = JSON.parse(localStorage.getItem("showStickies")) ?? true;
-    this.state.settings.fontIndex = parseInt(localStorage.getItem("fontIndex")) || 0;
+  async saveLocal(showNotify = false) {
     this.state.lastUpdated = Date.now();
-    this.saveLocal();
-  },
-
-  saveLocal(showNotify = true) {
-    this.state.lastUpdated = Date.now();
-    localStorage.setItem(this.config.STORAGE_KEY, JSON.stringify(this.state));
+    await chrome.storage.local.set({ [this.config.STORAGE_KEY]: this.state });
     if (showNotify) this.showNotification("saved locally");
-    this.saveCloudDebounced();
-  },
-
-  async loadCloud() {
-    if (!this.state.settings.authToken) return;
-
-    try {
-      const res = await fetch(`${this.config.CLOUD_API_ROOT}/api/load`, {
-        headers: { Authorization: `Bearer ${this.state.settings.authToken}` },
-      });
-      if (res.ok) {
-        const cloudData = await res.json();
-
-        if (!cloudData || Object.keys(cloudData).length === 0) {
-          this.saveCloud();
-          return;
-        }
-
-        this.state.textareaValue = cloudData.textareaValue || "";
-        this.state.stickyNotes = cloudData.stickyNotes || [];
-        this.state.lastUpdated = cloudData.lastUpdated || Date.now();
-
-        if (cloudData.settings) {
-          const { authToken, userEmail, ...rest } = cloudData.settings;
-          this.state.settings = { ...this.state.settings, ...rest };
-        }
-
-        this.applyStateToUI();
-        localStorage.setItem(this.config.STORAGE_KEY, JSON.stringify(this.state));
-        this.showNotification("synced from cloud");
-      } else if (res.status === 401) {
-        this.logout();
-      }
-    } catch (e) {
-      console.error("cloud load failed", e);
-    }
-  },
-
-  async saveCloud() {
-    if (!this.state.settings.authToken) return;
-
-    try {
-      const res = await fetch(`${this.config.CLOUD_API_ROOT}/api/save`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${this.state.settings.authToken}`,
-        },
-        body: JSON.stringify(this.state),
-      });
-      if (res.ok) this.showNotification("cloud synced");
-      else if (res.status === 401) this.logout();
-    } catch (e) {
-      console.error("cloud save failed", e);
-    }
-  },
-
-  saveCloudDebounced() {
-    clearTimeout(this.cloudTimer);
-    this.cloudTimer = setTimeout(() => this.saveCloud(), this.config.DEBOUNCE_DELAY);
   },
 
   async login() {
     if (!chrome.identity) return alert("run this as an extension!");
 
+    document.body.classList.add("loading");
     const redirectUrl = chrome.identity.getRedirectURL();
     const authUrl = `${this.config.CLOUD_API_ROOT}/auth/google?state=${encodeURIComponent(redirectUrl)}`;
 
-    chrome.identity.launchWebAuthFlow({ url: authUrl, interactive: true }, (urlStr) => {
+    chrome.identity.launchWebAuthFlow({ url: authUrl, interactive: true }, async (urlStr) => {
+      document.body.classList.remove("loading");
       if (chrome.runtime.lastError) {
         console.error("Auth flow failed:", chrome.runtime.lastError.message);
         return this.showNotification("login failed: " + chrome.runtime.lastError.message);
@@ -177,26 +136,143 @@ const App = {
 
       const token = new URL(urlStr).searchParams.get("token");
       if (token) {
-        this.state.settings.authToken = token;
-        try {
-          this.state.settings.userEmail = JSON.parse(atob(token.split(".")[1])).email;
-        } catch (e) {}
+        const userEmail = JSON.parse(atob(token.split(".")[1])).email;
 
-        this.saveLocal(false);
-        this.applyStateToUI();
-        this.loadCloud();
-        this.showNotification("logged in");
+        // Check for conflicts before fully committing
+        this.showNotification("checking cloud data...");
+        try {
+          const res = await fetch(`${this.config.CLOUD_API_ROOT}/api/load`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          const cloudData = res.ok ? await res.json() : null;
+          const hasCloudData = cloudData && cloudData.lastUpdated > 0;
+          const hasLocalData = this.state.lastUpdated > 0;
+
+          if (hasCloudData && hasLocalData) {
+            this.renderConflictUI(cloudData, token, userEmail);
+          } else {
+            // No conflict: just merge and go
+            this.state.settings.authToken = token;
+            this.state.settings.userEmail = userEmail;
+            await this.saveLocal(false);
+            // background.js will handle the push/pull based on timestamps
+            this.applyStateToUI();
+            this.showNotification("logged in");
+          }
+        } catch (e) {
+          console.error("Login conflict check failed", e);
+        }
       }
     });
   },
 
-  logout() {
-    this.state.settings.authToken = "";
-    this.state.settings.userEmail = "";
-    this.saveLocal(false);
+  renderConflictUI(cloudData, token, userEmail) {
+    // 1. Hide everything else
+    const mainUI = [
+      document.getElementById("textarea"),
+      document.getElementById("hoverchecker"),
+      ...document.querySelectorAll(".sticky-note"),
+    ];
+    mainUI.forEach((el) => {
+      if (el) el.style.display = "none";
+    });
+
+    const container = document.createElement("div");
+    container.id = "conflict-ui";
+    container.className = "sticky-note"; // Use existing sticky note style
+
+    // Center it manually
+    Object.assign(container.style, {
+      position: "fixed",
+      top: "50%",
+      left: "50%",
+      transform: "translate(-50%, -50%)",
+      width: "max-content",
+      height: "auto",
+      padding: "5px",
+      minHeight: "250px",
+      display: "flex",
+      flexDirection: "column",
+      zIndex: "2147483647",
+      visibility: "visible",
+    });
+
+    container.innerHTML = `
+      <div class="sticky-content" style="position:relative; display:flex; flex-direction:column; gap:15px; padding:20px;">
+        <h2 style="font-size: 18px; margin:0;">data conflict</h2>
+        <p style="font-size: 14px; opacity:0.8; margin:0;">you have unsynced local changes and existing cloud data. which one would you like to keep?</p>
+        
+        <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+          <button id="keep-cloud" class="sidebutton">
+            <u style="font-size:14px;">keep cloud data (download)</u>
+          </button>
+          <button id="keep-local" class="sidebutton">
+            <u style="font-size:14px;">keep local data (upload)</u>
+          </button>
+        </div>
+      </div>
+    `;
+
+    const restoreUI = () => {
+      container.remove();
+      mainUI.forEach((el) => {
+        if (el) el.style.display = "";
+      });
+    };
+
+    document.body.appendChild(container);
+
+    container.querySelector("#keep-cloud").onclick = async () => {
+      this.state = { ...this.state, ...cloudData };
+      this.state.settings.authToken = token;
+      this.state.settings.userEmail = userEmail;
+      this.state.lastSyncedAt = cloudData.lastUpdated;
+      await this.saveLocal(false);
+      restoreUI();
+      this.applyStateToUI();
+      this.showNotification("cloud data kept");
+    };
+
+    container.querySelector("#keep-local").onclick = async () => {
+      this.state.settings.authToken = token;
+      this.state.settings.userEmail = userEmail;
+      // Set lastSyncedAt to 0 to ensure background.js sees it as "dirty"
+      this.state.lastSyncedAt = 0;
+      await this.saveLocal(false);
+      restoreUI();
+      this.applyStateToUI();
+      this.showNotification("local data will be uploaded");
+    };
+  },
+
+  async logout() {
+    // 1. Trigger one final sync push if dirty
+    if (this.state.lastUpdated > this.state.lastSyncedAt) {
+      chrome.runtime.sendMessage({ type: "FORCE_SYNC" });
+    }
+
+    // 2. Clear state and storage
+    this.state = {
+      textareaValue: "",
+      stickyNotes: [],
+      lastUpdated: 0,
+      lastSyncedAt: 0,
+      settings: {
+        isBlur: false,
+        isDarkMode: false,
+        showStickies: true,
+        fontIndex: 0,
+        authToken: "",
+        userEmail: "",
+      },
+      stats: { count: 0, limit: 100 },
+    };
+
+    await chrome.storage.local.clear();
     this.applyStateToUI();
     this.updateStatsUI();
-    this.showNotification("logged out");
+    this.showNotification("logged out & local cleared");
   },
 
   showNotification(msg) {
@@ -300,7 +376,9 @@ const App = {
 
       if (k === "S") {
         e.preventDefault();
-        this.saveCloud();
+        // saveCloud is now handled by background.js,
+        // but we can still trigger a manual save if we want by updating lastUpdated
+        this.saveLocal();
       } else if (e.ctrlKey) {
         if (e.shiftKey && k === "Q") this.toggleDarkMode();
         else if (k === "Q") this.toggleBlur();
@@ -311,11 +389,19 @@ const App = {
       }
     });
 
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") {
-        this.loadLocal();
-        this.applyStateToUI();
-        this.loadCloud();
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+      if (areaName === "local" && changes[this.config.STORAGE_KEY]) {
+        const newState = changes[this.config.STORAGE_KEY].newValue;
+        if (newState && newState.lastUpdated > this.state.lastUpdated) {
+          this.state = newState;
+          this.applyStateToUI();
+        }
+      }
+    });
+
+    chrome.runtime.onMessage.addListener((msg) => {
+      if (msg.type === "CLOUD_SYNCED") {
+        this.showNotification("cloud synced");
       }
     });
   },

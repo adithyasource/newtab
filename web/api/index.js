@@ -89,12 +89,29 @@ export default async function handler(req, res) {
     const key = `user:${payload.email}:data`;
 
     if (pathname === "/api/save" && req.method === "POST") {
-      await redis.set(key, JSON.stringify(req.body));
+      let body = req.body;
+
+      // If req.body is not populated (raw Node/Bun handler), parse it manually
+      if (!body || Object.keys(body).length === 0) {
+        try {
+          const chunks = [];
+          for await (const chunk of req) chunks.push(chunk);
+          const raw = Buffer.concat(chunks).toString();
+          if (raw) body = JSON.parse(raw);
+        } catch (e) {
+          console.error("Failed to parse body manually", e);
+        }
+      }
+
+      if (!body) return res.status(400).json({ error: "missing body" });
+
+      await redis.set(key, JSON.stringify(body));
       return res.status(200).json({ ok: true });
     }
 
     if (pathname === "/api/load") {
       const data = (await redis.get(key)) || {};
+      console.log(data)
       return res.status(200).json(data);
     }
 
