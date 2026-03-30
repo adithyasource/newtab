@@ -2,6 +2,7 @@
   "name": "newtab-backend",
   "version": "1.0.0",
   "description": "Backend for newtab extension",
+  "type": "module",
   "main": "api/index.js",
   "scripts": {
     "dev": "bun api/index.js"
