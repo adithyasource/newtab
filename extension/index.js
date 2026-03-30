@@ -15,9 +15,7 @@ const App = {
 
   config: {
     STORAGE_KEY: "newtab_data",
-    CLOUD_API_ROOT: chrome.runtime.id === "fkockicclbflhmecobbdfejhmhgddkaf" 
-      ? "https://newtab.adithya.zip" 
-      : "http://localhost:3000",
+    CLOUD_API_ROOT: "https://newtab.adithya.zip",
     DEBOUNCE_DELAY: 2000,
   },
 
