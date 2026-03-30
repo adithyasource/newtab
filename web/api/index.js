@@ -105,14 +105,21 @@ export default async function handler(req, res) {
 
       if (!body) return res.status(400).json({ error: "missing body" });
 
-      await redis.set(key, JSON.stringify(body));
+      // Store as object (Upstash will handle JSON stringification internally)
+      await redis.set(key, body);
       return res.status(200).json({ ok: true });
     }
 
     if (pathname === "/api/load") {
-      const data = (await redis.get(key)) || {};
-      console.log(data)
-      return res.status(200).json(data);
+      const data = await redis.get(key);
+      // Ensure we return an object, even if Redis returned a string or null
+      let parsed = data || {};
+      if (typeof data === "string") {
+        try { parsed = JSON.parse(data); } catch (e) { parsed = {}; }
+      }
+      return res.status(200).json(parsed);
+    }
+
     }
 
     if (pathname === "/api/status") {

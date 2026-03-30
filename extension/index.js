@@ -33,6 +33,8 @@ const App = {
 
     if (this.state.settings.authToken) {
       this.fetchStatus();
+      // Instantly try to pull from cloud on refresh/open
+      chrome.runtime.sendMessage({ type: "FORCE_SYNC" });
     }
   },
 
@@ -402,6 +404,13 @@ const App = {
     chrome.runtime.onMessage.addListener((msg) => {
       if (msg.type === "CLOUD_SYNCED") {
         this.showNotification("cloud synced");
+      }
+    });
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        chrome.runtime.sendMessage({ type: "FORCE_SYNC" });
+        if (this.state.settings.authToken) this.fetchStatus();
       }
     });
   },

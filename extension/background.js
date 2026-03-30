@@ -41,17 +41,27 @@ async function syncEngine() {
       throw new Error(`Cloud load failed: ${res.status}`);
     }
 
-    const cloud = await res.json();
+    let cloud = await res.json();
+    if (typeof cloud === "string") {
+      try { cloud = JSON.parse(cloud); } catch (e) { cloud = {}; }
+    }
+    
     const cloudLastUpdated = cloud?.lastUpdated || 0;
     const localLastUpdated = local.lastUpdated || 0;
     const lastSyncedAt = local.lastSyncedAt || 0;
 
-    // --- CASE 1: Cloud is newer than local ---
-    if (cloudLastUpdated > localLastUpdated) {
-      console.log("Sync: Cloud is newer. Updating local cache.");
-      // Preserve local identity settings
+    // --- CASE 1: Cloud is newer than (or equal to) local ---
+    // We allow equal to handle cases where a pull might have been triggered 
+    // but we want to ensure local state is perfectly aligned with cloud.
+    if (cloudLastUpdated >= localLastUpdated) {
+      if (cloudLastUpdated === localLastUpdated && local.lastSyncedAt === cloudLastUpdated) {
+        console.log("Sync: Already in sync.");
+        return;
+      }
+      console.log("Sync: Cloud is newer or equal. Updating local cache.");
       const merged = {
         ...cloud,
+        lastUpdated: cloudLastUpdated,
         lastSyncedAt: cloudLastUpdated,
         settings: {
           ...cloud.settings,
