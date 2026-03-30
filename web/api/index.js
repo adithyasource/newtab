@@ -97,12 +97,4 @@ const handler = {
   }
 };
 
-if (typeof Bun !== 'undefined') {
-  Bun.serve({
-    port: 3000,
-    fetch: (req) => handler.fetch(req),
-  });
-  console.log("Server running on http://localhost:3000");
-}
-
 export default handler;
