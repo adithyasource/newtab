@@ -124,7 +124,7 @@ export default async function handler(req, res) {
       const countKey = `user:${payload.email}:image_count`;
       const limitKey = `user:${payload.email}:image_limit`;
       const count = parseInt(await redis.get(countKey)) || 0;
-      const limit = parseInt(await redis.get(limitKey)) || 100;
+      const limit = parseInt(await redis.get(limitKey)) || 50;
       return res.status(200).json({ count, limit });
     }
 
@@ -138,7 +138,7 @@ export default async function handler(req, res) {
       const countKey = `user:${payload.email}:image_count`;
       const limitKey = `user:${payload.email}:image_limit`;
       const count = parseInt(await redis.get(countKey)) || 0;
-      const limit = parseInt(await redis.get(limitKey)) || 100;
+      const limit = parseInt(await redis.get(limitKey)) || 50;
 
       if (count >= limit) {
         return res.status(400).send("limit exceeded");

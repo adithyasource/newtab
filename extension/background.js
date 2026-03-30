@@ -43,15 +43,19 @@ async function syncEngine() {
 
     let cloud = await res.json();
     if (typeof cloud === "string") {
-      try { cloud = JSON.parse(cloud); } catch (e) { cloud = {}; }
+      try {
+        cloud = JSON.parse(cloud);
+      } catch (e) {
+        cloud = {};
+      }
     }
-    
+
     const cloudLastUpdated = cloud?.lastUpdated || 0;
     const localLastUpdated = local.lastUpdated || 0;
     const lastSyncedAt = local.lastSyncedAt || 0;
 
     // --- CASE 1: Cloud is newer than (or equal to) local ---
-    // We allow equal to handle cases where a pull might have been triggered 
+    // We allow equal to handle cases where a pull might have been triggered
     // but we want to ensure local state is perfectly aligned with cloud.
     if (cloudLastUpdated >= localLastUpdated) {
       if (cloudLastUpdated === localLastUpdated && local.lastSyncedAt === cloudLastUpdated) {

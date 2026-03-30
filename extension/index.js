@@ -268,7 +268,7 @@ const App = {
         authToken: "",
         userEmail: "",
       },
-      stats: { count: 0, limit: 100 },
+      stats: { count: 0, limit: 50 },
     };
 
     await chrome.storage.local.clear();
