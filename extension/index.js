@@ -175,7 +175,7 @@ const App = {
 
     const ui = document.getElementById("userinfo");
     ui.style.display = loggedIn ? "block" : "none";
-    ui.textContent = loggedIn ? `hi ${this.state.settings.userEmail}` : "";
+    ui.textContent = loggedIn ? `${this.state.settings.userEmail}` : "";
 
     document.querySelectorAll(".sticky-note").forEach((el) => el.remove());
     this.state.stickyNotes.forEach((n) => this.renderStickyNote(n));
