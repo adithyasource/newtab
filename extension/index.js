@@ -451,6 +451,10 @@ const App = {
           }
           const blob = item.getAsFile();
           if (this.state.settings.authToken) {
+            if (this.state.stats.count >= this.state.stats.limit) {
+              this.showNotification("image limit reached! delete some images first.");
+              continue;
+            }
             this.showNotification("uploading...");
             const fd = new FormData();
             fd.append("image", blob);
@@ -465,14 +469,15 @@ const App = {
                 document.execCommand("insertImage", false, url);
                 this.showNotification("uploaded");
                 this.fetchStatus();
+              } else {
+                const errData = await res.json().catch(() => ({}));
+                this.showNotification(errData.error || "upload failed");
               }
             } catch (err) {
               this.showNotification("upload failed");
             }
           } else {
-            const r = new FileReader();
-            r.onload = (ev) => document.execCommand("insertImage", false, ev.target.result);
-            r.readAsDataURL(blob);
+            this.showNotification("login to paste images");
           }
         } else if (item.type === "text/plain") {
           item.getAsString((t) => {

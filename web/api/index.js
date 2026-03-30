@@ -76,14 +76,14 @@ export default async function handler(req, res) {
 
     const auth = req.headers.authorization;
     if (!auth?.startsWith("Bearer ")) {
-      return res.status(401).send("unauthorized");
+      return res.status(401).json({ error: "unauthorized" });
     }
 
     let payload;
     try {
       payload = jwt.verify(auth.split(" ")[1], JWT_SECRET);
     } catch (e) {
-      return res.status(401).send("bad token");
+      return res.status(401).json({ error: "bad token" });
     }
 
     const key = `user:${payload.email}:data`;
