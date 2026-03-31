@@ -1,6 +1,7 @@
 const CONFIG = {
   STORAGE_KEY: "newtab_data",
   CLOUD_API_ROOT: "https://newtab.adithya.zip",
+  // CLOUD_API_ROOT: "http://localhost:3000",
   SYNC_ALARM_NAME: "sync-check",
   DEBOUNCE_ALARM_NAME: "debounce-push",
   SYNC_INTERVAL_MINUTES: 5,

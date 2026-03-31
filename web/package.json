@@ -3,15 +3,15 @@
   "version": "1.0.0",
   "description": "Backend for newtab extension",
   "type": "module",
-  "main": "api/index.js",
+  "main": "server.js",
   "scripts": {
-    "dev": "bun api/index.js"
+    "dev": "bun --watch server.js",
+    "start": "bun server.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.515.0",
     "@upstash/redis": "^1.28.4",
     "axios": "^1.6.7",
-    "formidable": "^3.5.4",
     "jsonwebtoken": "^9.0.2",
     "sharp": "^0.33.2"
   }
