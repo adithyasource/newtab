@@ -257,7 +257,7 @@ details p {
 }
 
 .sticky-content img {
-  width: inherit !important;
+  width: 100%;
 }
 
 .cloud-input {

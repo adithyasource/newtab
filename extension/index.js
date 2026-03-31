@@ -64,7 +64,7 @@ const App = {
       countText.textContent = `${count} / ${limit}`;
       const percent = Math.min((count / limit) * 100, 100);
       progressBar.style.width = `${percent}%`;
-      progressBar.style.backgroundColor = percent >= 100 ? "#ff4444" : "#4CAF50";
+      progressBar.style.backgroundColor = percent >= 100 ? "#ff4444" : "#ffffff";
     } else {
       statsEl.style.display = "none";
     }
