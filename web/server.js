@@ -21,6 +21,27 @@ const s3 = new S3Client({
 
 const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI, JWT_SECRET, EXTENSION_ID, R2_BUCKET_NAME, R2_PUBLIC_DOMAIN } = process.env;
 
+const requiredEnv = [
+  "UPSTASH_REDIS_REST_URL",
+  "UPSTASH_REDIS_REST_TOKEN",
+  "GOOGLE_CLIENT_ID",
+  "GOOGLE_CLIENT_SECRET",
+  "GOOGLE_REDIRECT_URI",
+  "JWT_SECRET",
+  "EXTENSION_ID",
+  "R2_ACCOUNT_ID",
+  "R2_ACCESS_KEY_ID",
+  "R2_SECRET_ACCESS_KEY",
+  "R2_BUCKET_NAME",
+  "R2_PUBLIC_DOMAIN"
+];
+
+for (const env of requiredEnv) {
+  if (!process.env[env]) {
+    console.warn(`Warning: Environment variable ${env} is missing.`);
+  }
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
@@ -74,7 +95,11 @@ const server = Bun.serve({
         return Response.redirect(`${extUrl}?token=${token}`);
       }
 
-      // Check if it's an API route that requires auth
+      // 3. API Routes
+      if (pathname === "/api" || pathname === "/api/") {
+        return Response.json({ status: "ok", message: "newtab api is running" }, { headers: corsHeaders });
+      }
+
       if (pathname.startsWith("/api/")) {
         const auth = req.headers.get("authorization");
         if (!auth?.startsWith("Bearer ")) {
@@ -90,7 +115,7 @@ const server = Bun.serve({
 
         const key = `user:${payload.email}:data`;
 
-        // 3. API: Save data
+        // Save data
         if (pathname === "/api/save" && req.method === "POST") {
           const body = await req.json();
           if (!body) return Response.json({ error: "missing body" }, { status: 400, headers: corsHeaders });
@@ -99,7 +124,7 @@ const server = Bun.serve({
           return Response.json({ ok: true }, { headers: corsHeaders });
         }
 
-        // 4. API: Load data
+        // Load data
         if (pathname === "/api/load") {
           const data = await redis.get(key);
           let parsed = data || {};
@@ -109,7 +134,7 @@ const server = Bun.serve({
           return Response.json(parsed, { headers: corsHeaders });
         }
 
-        // 5. API: Image status
+        // Image status
         if (pathname === "/api/status") {
           const countKey = `user:${payload.email}:image_count`;
           const limitKey = `user:${payload.email}:image_limit`;
@@ -118,7 +143,7 @@ const server = Bun.serve({
           return Response.json({ count, limit }, { headers: corsHeaders });
         }
 
-        // 6. API: Upload image
+        // Upload image
         if (pathname === "/api/upload" && req.method === "POST") {
           const formData = await req.formData();
           const file = formData.get("image");
@@ -155,7 +180,7 @@ const server = Bun.serve({
           return Response.json({ url: `${R2_PUBLIC_DOMAIN}/${name}` }, { headers: corsHeaders });
         }
 
-        // 7. API: Delete image
+        // Delete image
         if (pathname === "/api/delete-image" && req.method === "POST") {
           const { url: imageUrl } = await req.json();
           if (!imageUrl) return new Response("missing url", { status: 400, headers: corsHeaders });
@@ -180,17 +205,25 @@ const server = Bun.serve({
           }
           return new Response("invalid url", { status: 400, headers: corsHeaders });
         }
+
+        return Response.json({ error: "not found" }, { status: 404, headers: corsHeaders });
       }
 
-      // 8. Serve Static Files
-      let filePath = path.join("public", pathname === "/" ? "index.html" : pathname);
+      // 4. Serve Static Files
+      const decodedPathname = decodeURIComponent(pathname);
+      let filePath = path.join(process.cwd(), "public", decodedPathname === "/" ? "index.html" : decodedPathname);
       const file = Bun.file(filePath);
       
       if (await file.exists()) {
-        return new Response(file);
+        return new Response(file, {
+          headers: {
+            ...corsHeaders,
+            "Content-Type": file.type,
+          }
+        });
       }
 
-      return new Response("Not Found", { status: 404 });
+      return new Response("Not Found", { status: 404, headers: corsHeaders });
 
     } catch (err) {
       console.error(err);
