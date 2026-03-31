@@ -27,7 +27,7 @@ async function setLocal(data) {
 
 async function syncEngine() {
   const local = await getLocal();
-  if (!local?.settings?.authToken) return;
+  if (!local.settings.authToken) return;
 
   try {
     const res = await fetch(`${CONFIG.CLOUD_API_ROOT}/api/load`, {
