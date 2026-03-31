@@ -64,7 +64,7 @@ const App = {
       countText.textContent = `${count} / ${limit}`;
       const percent = Math.min((count / limit) * 100, 100);
       progressBar.style.width = `${percent}%`;
-      progressBar.style.backgroundColor = percent >= 100 ? "#ff4444" : "#ffffff";
+      progressBar.style.backgroundColor = percent >= 100 ? "#ff4444" : "var(--border)";
     } else {
       statsEl.style.display = "none";
     }
@@ -288,8 +288,7 @@ const App = {
   },
 
   updateTheme() {
-    const mode = this.state.settings.isDarkMode ? "dark" : "light";
-    document.documentElement.style.setProperty("--scheme", mode);
+    document.documentElement.classList.toggle("dark", this.state.settings.isDarkMode);
   },
 
   updateFont() {
