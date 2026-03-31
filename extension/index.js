@@ -281,9 +281,11 @@ const App = {
     this.updateStickyVisibility();
 
     document.querySelector('[contenteditable="true"]').classList.toggle("blur", this.state.settings.isBlur);
-    const stickyNotes = document.querySelector(".sticky-note");
+    const stickyNotes = document.getElementsByClassName("sticky-note");
     if (stickyNotes) {
-      stickyNotes.classList.toggle("blur", this.state.settings.isBlur);
+      for (x of stickyNotes) {
+        x.classList.toggle("blur", this.state.settings.isBlur);
+      }
     }
   },
 
@@ -410,9 +412,11 @@ const App = {
   toggleBlur() {
     this.state.settings.isBlur = !this.state.settings.isBlur;
     document.querySelector('[contenteditable="true"]').classList.toggle("blur", this.state.settings.isBlur);
-    const stickyNotes = document.querySelector(".sticky-note");
+    const stickyNotes = document.getElementsByClassName("sticky-note");
     if (stickyNotes) {
-      stickyNotes.classList.toggle("blur", this.state.settings.isBlur);
+      for (x of stickyNotes) {
+        x.classList.toggle("blur", this.state.settings.isBlur);
+      }
     }
     this.saveLocal();
   },
