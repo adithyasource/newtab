@@ -170,62 +170,37 @@ const App = {
   },
 
   renderConflictUI(cloudData, token, userEmail) {
-    // 1. Hide everything else
-    const mainUI = [
-      document.getElementById("textarea"),
-      document.getElementById("hoverchecker"),
-      ...document.querySelectorAll(".sticky-note"),
-    ];
-    mainUI.forEach((el) => {
-      if (el) el.style.display = "none";
+    const ta = document.getElementById("textarea");
+
+    // Hide other UI elements
+    const hoverChecker = document.getElementById("hoverchecker");
+    if (hoverChecker) hoverChecker.style.display = "none";
+    document.querySelectorAll(".sticky-note").forEach((el) => {
+      el.style.display = "none";
     });
 
-    const container = document.createElement("div");
-    container.id = "conflict-ui";
-    container.className = "sticky-note"; // Use existing sticky note style
+    // Clear textarea temporarily and insert conflict UI
+    ta.innerHTML = "";
+    const wrapper = document.createElement("div");
+    wrapper.contentEditable = "false";
+    wrapper.className = "conflict-confirm";
 
-    // Center it manually
-    Object.assign(container.style, {
-      position: "fixed",
-      top: "50%",
-      left: "50%",
-      transform: "translate(-50%, -50%)",
-      width: "max-content",
-      height: "auto",
-      padding: "5px",
-      minHeight: "250px",
-      display: "flex",
-      flexDirection: "column",
-      zIndex: "2147483647",
-      visibility: "visible",
-    });
-
-    container.innerHTML = `
-      <div class="sticky-content" style="position:relative; display:flex; flex-direction:column; gap:15px; padding:20px;">
-        <h2 style="font-size: 18px; margin:0;">data conflict</h2>
-        <p style="font-size: 14px; opacity:0.8; margin:0;">you have unsynced local changes and existing cloud data. which one would you like to keep?</p>
-        
-        <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
-          <button id="keep-cloud" class="sidebutton">
-            <u style="font-size:14px;">keep cloud data (download)</u>
-          </button>
-          <button id="keep-local" class="sidebutton">
-            <u style="font-size:14px;">keep local data (upload)</u>
-          </button>
-        </div>
+    wrapper.innerHTML = `
+      <span>data conflict: you have local changes and cloud data. which to keep?</span>
+      <div style="display: flex; gap: 8px;">
+        <button id="keep-cloud"><u>keep cloud</u></button>
+        <button id="keep-local"><u>keep local</u></button>
       </div>
     `;
 
+    ta.appendChild(wrapper);
+
     const restoreUI = () => {
-      container.remove();
-      mainUI.forEach((el) => {
-        if (el) el.style.display = "";
-      });
+      if (hoverChecker) hoverChecker.style.display = "";
+      // applyStateToUI will handle re-showing stickies and restoring textarea content
     };
 
-    document.body.appendChild(container);
-
-    container.querySelector("#keep-cloud").onclick = async () => {
+    wrapper.querySelector("#keep-cloud").onclick = async () => {
       this.state = { ...this.state, ...cloudData };
       this.state.settings.authToken = token;
       this.state.settings.userEmail = userEmail;
@@ -236,10 +211,9 @@ const App = {
       this.showNotification("cloud data kept");
     };
 
-    container.querySelector("#keep-local").onclick = async () => {
+    wrapper.querySelector("#keep-local").onclick = async () => {
       this.state.settings.authToken = token;
       this.state.settings.userEmail = userEmail;
-      // Set lastSyncedAt to 0 to ensure background.js sees it as "dirty"
       this.state.lastSyncedAt = 0;
       await this.saveLocal(false);
       restoreUI();
@@ -344,6 +318,7 @@ const App = {
   setupListeners() {
     const ta = document.getElementById("textarea");
     ta.addEventListener("input", () => {
+      if (ta.querySelector(".conflict-confirm")) return;
       this.state.textareaValue = ta.innerHTML;
       this.saveLocal();
     });

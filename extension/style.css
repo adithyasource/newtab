@@ -46,6 +46,7 @@ button {
   margin: 0;
   padding: 0;
   cursor: pointer;
+  border: none;
   background-color: if( style(--scheme: dark): #121212; else: #ffffff;);
 }
 
@@ -129,7 +130,6 @@ select {
 }
 
 .sidebutton {
-  border: none;
   padding-left: 6px;
 }
 
@@ -230,7 +230,6 @@ details p {
 
 .sticky-close {
   background: none;
-  border: none;
   cursor: pointer;
   padding: 0;
   position: absolute;
@@ -252,7 +251,6 @@ details p {
 }
 
 .todo-check {
-  border: none;
   padding-left: 6px;
   color: inherit;
   padding-right: 6px;
