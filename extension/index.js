@@ -434,6 +434,7 @@ const App = {
   },
 
   createStickyNote() {
+    const maxZ = this.state.stickyNotes.reduce((max, note) => Math.max(max, note.zIndex || 0), 0);
     const n = {
       id: `sticky-${Date.now()}`,
       left: 100 + ((this.state.stickyNotes.length * 20) % 200),
@@ -441,6 +442,7 @@ const App = {
       width: 400,
       height: 300,
       content: "",
+      zIndex: maxZ + 1,
     };
     this.state.stickyNotes.push(n);
     this.state.settings.showStickies = true;
@@ -458,6 +460,7 @@ const App = {
       top: `${n.top}px`,
       width: `${n.width}px`,
       height: `${n.height}px`,
+      zIndex: n.zIndex || 0,
       visibility: this.state.settings.showStickies ? "visible" : "hidden",
     });
 
@@ -468,6 +471,8 @@ const App = {
     `;
 
     document.body.appendChild(el);
+
+    el.addEventListener("mousedown", () => this.bringToFront(n));
 
     const content = el.querySelector(".sticky-content");
     el.querySelector(".sticky-close").addEventListener("click", () => {
@@ -505,7 +510,6 @@ const App = {
         dragging = true;
         sx = e.clientX - el.offsetLeft;
         sy = e.clientY - el.offsetTop;
-        el.style.zIndex = Date.now();
         e.preventDefault();
       }
     });
@@ -523,6 +527,16 @@ const App = {
         this.saveLocal();
       }
     });
+  },
+
+  bringToFront(n) {
+    const maxZ = this.state.stickyNotes.reduce((max, note) => Math.max(max, note.zIndex || 0), 0);
+    if (n.zIndex < maxZ) {
+      n.zIndex = maxZ + 1;
+      const el = document.getElementById(n.id);
+      if (el) el.style.zIndex = n.zIndex;
+      this.saveLocal();
+    }
   },
 
   attachEvents(el) {
