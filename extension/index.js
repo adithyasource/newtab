@@ -172,12 +172,19 @@ const App = {
   renderConflictUI(cloudData, token, userEmail) {
     const ta = document.getElementById("textarea");
 
-    // Hide other UI elements
+    // Hide sidebar and sticky notes
     const hoverChecker = document.getElementById("hoverchecker");
     if (hoverChecker) hoverChecker.style.display = "none";
     document.querySelectorAll(".sticky-note").forEach((el) => {
       el.style.display = "none";
     });
+
+    // Force unblur so the user can see the confirmation message
+    const wasBlurred = this.state.settings.isBlur;
+    if (wasBlurred) {
+      this.state.settings.isBlur = false;
+      ta.classList.remove("blur");
+    }
 
     // Clear textarea temporarily and insert conflict UI
     ta.innerHTML = "";
@@ -249,6 +256,150 @@ const App = {
     this.applyStateToUI();
     this.updateStatsUI();
     this.showNotification("logged out & local cleared");
+  },
+
+  async exportData() {
+    if (!this.state.settings.authToken) {
+      this.showNotification("login to export data");
+      return;
+    }
+
+    this.showNotification("exporting data...");
+    try {
+      const res = await fetch(`${this.config.CLOUD_API_ROOT}/api/export-data`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${this.state.settings.authToken}` },
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        this.showNotification(`export failed: ${err.error || "unknown error"}`);
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const date = new Date().toISOString().slice(0, 10);
+      a.download = `newtab-backup-${date}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      this.showNotification("data exported");
+    } catch (e) {
+      console.error("Export failed", e);
+      this.showNotification("export failed");
+    }
+  },
+
+  importData() {
+    if (!this.state.settings.authToken) {
+      this.showNotification("login to import data");
+      return;
+    }
+
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".zip,application/zip";
+    input.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      // Show confirmation before replacing data
+      this.renderImportConfirmUI(file);
+    });
+
+    input.click();
+  },
+
+  renderImportConfirmUI(file) {
+    const ta = document.getElementById("textarea");
+
+    // Hide sidebar
+    const hoverChecker = document.getElementById("hoverchecker");
+    if (hoverChecker) hoverChecker.style.display = "none";
+    document.querySelectorAll(".sticky-note").forEach((el) => {
+      el.style.display = "none";
+    });
+
+    // Clear textarea temporarily and insert confirmation UI
+    ta.innerHTML = "";
+    const wrapper = document.createElement("div");
+    wrapper.contentEditable = "false";
+    wrapper.className = "conflict-confirm";
+
+    wrapper.innerHTML = `
+      <span>data conflict: importing will replace all your current data. continue?</span>
+      <div style="display: flex; gap: 8px;">
+        <button id="replace-data"><u>replace data</u></button>
+        <button id="cancel-import"><u>cancel</u></button>
+      </div>
+    `;
+
+    ta.appendChild(wrapper);
+
+    const restoreUI = () => {
+      if (hoverChecker) hoverChecker.style.display = "";
+      // applyStateToUI will handle re-showing stickies and restoring textarea content
+    };
+
+    wrapper.querySelector("#replace-data").onclick = async () => {
+      restoreUI();
+      await this.processImport(file);
+    };
+
+    wrapper.querySelector("#cancel-import").onclick = () => {
+      restoreUI();
+      this.applyStateToUI();
+      this.showNotification("import cancelled");
+    };
+  },
+
+  async processImport(file) {
+    this.showNotification("importing data...");
+    try {
+      const formData = new FormData();
+      formData.append("zip", file);
+
+      const res = await fetch(`${this.config.CLOUD_API_ROOT}/api/import-data`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${this.state.settings.authToken}` },
+        body: formData,
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        this.showNotification(`import failed: ${result.error || "unknown error"}`);
+        return;
+      }
+
+      this.showNotification(`imported! ${result.imagesUploaded} images uploaded`);
+
+      // Reload state from server
+      const loadRes = await fetch(`${this.config.CLOUD_API_ROOT}/api/load`, {
+        headers: { Authorization: `Bearer ${this.state.settings.authToken}` },
+      });
+      if (loadRes.ok) {
+        const cloudData = await loadRes.json();
+        this.state = {
+          ...this.state,
+          ...cloudData,
+          settings: {
+            ...this.state.settings,
+            ...(cloudData.settings || {}),
+          },
+        };
+        await this.saveLocal(false);
+        this.applyStateToUI();
+        this.fetchStatus();
+      }
+    } catch (e) {
+      console.error("Import failed", e);
+      this.showNotification("import failed");
+    }
   },
 
   showNotification(msg) {
@@ -336,6 +487,8 @@ const App = {
       },
       newstickynotebtn: () => this.createStickyNote(),
       toggleshowstickiesbtn: () => this.toggleShowStickies(),
+      exportbtn: () => this.exportData(),
+      importbtn: () => this.importData(),
       loginbtn: () => this.login(),
       logoutbtn: () => this.logout(),
     };

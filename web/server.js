@@ -1,9 +1,10 @@
 import { Redis } from "@upstash/redis";
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
 import sharp from "sharp";
 import jwt from "jsonwebtoken";
 import axios from "axios";
 import path from "node:path";
+import JSZip from "jszip";
 
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL,
@@ -204,6 +205,221 @@ const server = Bun.serve({
             return Response.json({ ok: true }, { headers: corsHeaders });
           }
           return new Response("invalid url", { status: 400, headers: corsHeaders });
+        }
+
+        // Export data as zip
+        if (pathname === "/api/export-data" && req.method === "POST") {
+          const data = await redis.get(key);
+          let parsed = data || {};
+          if (typeof data === "string") {
+            try { parsed = JSON.parse(data); } catch (e) { parsed = {}; }
+          }
+
+          const zip = new JSZip();
+          const imagesFolder = zip.folder("images");
+
+          // Extract all image URLs from textareaValue and stickyNotes content
+          const imageUrls = new Set();
+          const urlRegex = /https?:\/\/[^"'\s]+\.(?:jpg|jpeg|png|gif|webp|svg|bmp|ico)/gi;
+
+          // Check textareaValue
+          if (parsed.textareaValue) {
+            const matches = parsed.textareaValue.match(urlRegex) || [];
+            for (const u of matches) imageUrls.add(u);
+          }
+
+          // Check sticky notes
+          if (Array.isArray(parsed.stickyNotes)) {
+            for (const note of parsed.stickyNotes) {
+              if (note.content) {
+                const matches = note.content.match(urlRegex) || [];
+                for (const u of matches) imageUrls.add(u);
+              }
+            }
+          }
+
+          // Download images from R2 and add to zip, rewrite URLs
+          let imageIndex = 0;
+          const urlToLocalMap = {};
+
+          for (const imageUrl of imageUrls) {
+            const imageUrlObj = new URL(imageUrl);
+            const fileKey = imageUrlObj.pathname.startsWith("/") ? imageUrlObj.pathname.slice(1) : imageUrlObj.pathname;
+
+            // Only download images that belong to this user
+            if (!fileKey.startsWith(`${payload.email}/`)) {
+              // Still map the URL so the export works, but skip download
+              const ext = path.extname(fileKey) || ".jpg";
+              const localName = `image_${imageIndex}${ext}`;
+              urlToLocalMap[imageUrl] = `./images/${localName}`;
+              imageIndex++;
+              continue;
+            }
+
+            try {
+              const response = await s3.send(new GetObjectCommand({
+                Bucket: R2_BUCKET_NAME,
+                Key: fileKey,
+              }));
+
+              const buffer = await response.Body.transformToByteArray();
+              const ext = path.extname(fileKey) || ".jpg";
+              const localName = `image_${imageIndex}${ext}`;
+              imagesFolder.file(localName, buffer);
+              urlToLocalMap[imageUrl] = `./images/${localName}`;
+              imageIndex++;
+            } catch (e) {
+              console.error(`Failed to download image ${fileKey}:`, e);
+            }
+          }
+
+          // Rewrite image URLs in the data
+          if (parsed.textareaValue) {
+            for (const [remoteUrl, localPath] of Object.entries(urlToLocalMap)) {
+              parsed.textareaValue = parsed.textareaValue.replaceAll(remoteUrl, localPath);
+            }
+          }
+          if (Array.isArray(parsed.stickyNotes)) {
+            for (const note of parsed.stickyNotes) {
+              if (note.content) {
+                for (const [remoteUrl, localPath] of Object.entries(urlToLocalMap)) {
+                  note.content = note.content.replaceAll(remoteUrl, localPath);
+                }
+              }
+            }
+          }
+
+          // Strip auth credentials and sync timestamps
+          const { authToken, userEmail, lastSyncedAt, ...exportData } = parsed;
+          exportData.settings = { ...(parsed.settings || {}) };
+          delete exportData.settings.authToken;
+          delete exportData.settings.userEmail;
+          exportData.exportedAt = new Date().toISOString();
+
+          zip.file("data.json", JSON.stringify(exportData, null, 2));
+
+          const zipBuffer = await zip.generateAsync({ type: "arraybuffer" });
+          const date = new Date().toISOString().slice(0, 10);
+
+          return new Response(zipBuffer, {
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "application/zip",
+              "Content-Disposition": `attachment; filename="newtab-backup-${date}.zip"`,
+            },
+          });
+        }
+
+        // Import data from zip
+        if (pathname === "/api/import-data" && req.method === "POST") {
+          const formData = await req.formData();
+          const file = formData.get("zip");
+
+          if (!file || !(file instanceof Blob)) {
+            return Response.json({ error: "no zip file" }, { status: 400, headers: corsHeaders });
+          }
+
+          const zipBuffer = await file.arrayBuffer();
+          const zip = await JSZip.loadAsync(zipBuffer);
+
+          // Read data.json
+          const dataJson = zip.file("data.json");
+          if (!dataJson) {
+            return Response.json({ error: "missing data.json in zip" }, { status: 400, headers: corsHeaders });
+          }
+
+          const importedData = JSON.parse(await dataJson.async("string"));
+
+          // Count images in the zip
+          const imagesFolder = zip.folder("images");
+          const imageFileEntries = imagesFolder
+            ? Object.entries(imagesFolder.files).filter(([, f]) => !f.dir)
+            : [];
+          const imageFiles = imageFileEntries.map(([fullPath, _f]) => {
+            // fullPath is like "images/image_0.jpg", extract just the filename
+            return fullPath.replace(/^images\//, "");
+          });
+          const limit = parseInt(await redis.get(`user:${payload.email}:image_limit`)) || 15;
+
+          // Reject if the zip alone has more images than the limit
+          if (imageFiles.length > limit) {
+            return Response.json({
+              error: `too many images in backup: ${imageFiles.length} exceeds the limit of ${limit}`,
+            }, { status: 400, headers: corsHeaders });
+          }
+
+          // Delete all existing images for this user before importing
+          const countKey = `user:${payload.email}:image_count`;
+          const currentCount = parseInt(await redis.get(countKey)) || 0;
+          if (currentCount > 0) {
+            try {
+              const listResponse = await s3.send(new ListObjectsV2Command({
+                Bucket: R2_BUCKET_NAME,
+                Prefix: `${payload.email}/`,
+              }));
+
+              if (listResponse.Contents && listResponse.Contents.length > 0) {
+                for (const obj of listResponse.Contents) {
+                  await s3.send(new DeleteObjectCommand({
+                    Bucket: R2_BUCKET_NAME,
+                    Key: obj.Key,
+                  }));
+                }
+              }
+            } catch (e) {
+              console.error("Failed to delete existing images:", e);
+            }
+            await redis.set(countKey, 0);
+          }
+
+          // Upload images to R2 and build URL mapping
+          const localToRemoteUrlMap = {};
+          for (const imageName of imageFiles) {
+            const imageFile = zip.file(`images/${imageName}`);
+            if (!imageFile) continue;
+
+            const imageBuffer = await imageFile.async("arraybuffer");
+            const ext = path.extname(imageName) || ".jpg";
+            const name = `${payload.email}/${Date.now()}_${imageName}`;
+
+            await s3.send(new PutObjectCommand({
+              Bucket: R2_BUCKET_NAME,
+              Key: name,
+              Body: imageBuffer,
+              ContentType: `image/${ext.replace(".", "")}`,
+            }));
+
+            localToRemoteUrlMap[`./images/${imageName}`] = `${R2_PUBLIC_DOMAIN}/${name}`;
+            await redis.incr(`user:${payload.email}:image_count`);
+          }
+
+          // Rewrite local image URLs back to cloud URLs
+          if (importedData.textareaValue) {
+            for (const [localPath, remoteUrl] of Object.entries(localToRemoteUrlMap)) {
+              importedData.textareaValue = importedData.textareaValue.replaceAll(localPath, remoteUrl);
+            }
+          }
+          if (Array.isArray(importedData.stickyNotes)) {
+            for (const note of importedData.stickyNotes) {
+              if (note.content) {
+                for (const [localPath, remoteUrl] of Object.entries(localToRemoteUrlMap)) {
+                  note.content = note.content.replaceAll(localPath, remoteUrl);
+                }
+              }
+            }
+          }
+
+          // Save to Redis - strip any auth credentials from the imported settings
+          const { authToken: _at, userEmail: _ue, ...safeSettings } = importedData.settings || {};
+          await redis.set(key, {
+            textareaValue: importedData.textareaValue,
+            stickyNotes: importedData.stickyNotes,
+            lastUpdated: Date.now(),
+            settings: safeSettings,
+            stats: importedData.stats || {},
+          });
+
+          return Response.json({ ok: true, imagesUploaded: imageFiles.length }, { headers: corsHeaders });
         }
 
         return Response.json({ error: "not found" }, { status: 404, headers: corsHeaders });
