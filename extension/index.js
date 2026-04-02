@@ -429,7 +429,9 @@ const App = {
         if (!html) return html;
         const temp = document.createElement("div");
         temp.innerHTML = html;
-        temp.querySelectorAll("img").forEach((img) => img.remove());
+        temp.querySelectorAll("img").forEach((img) => {
+          img.remove();
+        });
         return temp.innerHTML;
       };
 
@@ -572,8 +574,12 @@ const App = {
     ui.style.display = loggedIn ? "block" : "none";
     ui.textContent = loggedIn ? `${this.state.settings.userEmail}` : "";
 
-    document.querySelectorAll(".sticky-note").forEach((el) => el.remove());
-    this.state.stickyNotes.forEach((n) => this.renderStickyNote(n));
+    document.querySelectorAll(".sticky-note").forEach((el) => {
+      el.remove();
+    });
+    this.state.stickyNotes.forEach((n) => {
+      this.renderStickyNote(n);
+    });
     this.updateStickyVisibility();
 
     document.querySelector('[contenteditable="true"]').classList.toggle("blur", this.state.settings.isBlur);
@@ -621,6 +627,11 @@ const App = {
     });
     this.attachEvents(ta);
 
+    const statsEl = document.getElementById("image-stats");
+    statsEl.addEventListener("mouseenter", () => {
+      this.showNotification("contact me@adithya.zip for limit increase");
+    });
+
     const btns = {
       blurtogglebtn: () => this.toggleBlur(),
       darkmodebtn: () => this.toggleDarkMode(),
@@ -638,7 +649,9 @@ const App = {
       logoutbtn: () => this.logout(),
     };
 
-    Object.entries(btns).forEach(([id, fn]) => document.getElementById(id).addEventListener("click", fn));
+    Object.entries(btns).forEach(([id, fn]) => {
+      document.getElementById(id).addEventListener("click", fn);
+    });
 
     const dd = document.getElementById("dropdown");
     dd.addEventListener("change", () => {
@@ -703,7 +716,6 @@ const App = {
 
   hideSidebar() {
     const sb = document.getElementById("sidebar");
-    const checker = document.getElementById("hoverchecker");
     sb.style.animationName = "out";
     sb.style.visibility = "hidden";
     document.getElementById("fontsidebar").style.visibility = "hidden";
@@ -911,7 +923,7 @@ const App = {
           if (val === "y") {
             const originalHtml = wrapper.dataset.original;
             const match = originalHtml.match(/src="([^"]+)"/);
-            if (match && match[1]) {
+            if (match?.[1]) {
               this.deleteImageFromCloud(match[1]);
             }
             wrapper.remove();
