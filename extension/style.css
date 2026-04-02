@@ -139,6 +139,7 @@ select {
   height: 13em;
   position: fixed;
   margin-top: 4vh;
+  z-index: 100000;
 }
 
 .sidebutton {

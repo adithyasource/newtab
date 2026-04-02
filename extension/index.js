@@ -329,7 +329,10 @@ const App = {
       blurtogglebtn: () => this.toggleBlur(),
       darkmodebtn: () => this.toggleDarkMode(),
       changefont: () => {
-        document.getElementById("fontsidebar").style.visibility = "visible";
+        const fontSidebar = document.getElementById("fontsidebar");
+        const isVisible = fontSidebar.style.visibility === "visible";
+        fontSidebar.style.visibility = isVisible ? "hidden" : "visible";
+        this.updateHoverCheckerWidth();
       },
       newstickynotebtn: () => this.createStickyNote(),
       toggleshowstickiesbtn: () => this.toggleShowStickies(),
@@ -352,7 +355,7 @@ const App = {
       const sb = document.getElementById("sidebar");
       sb.style.visibility = "visible";
       sb.style.animationName = "in";
-      Object.assign(checker.style, { width: "40vw", height: "13em" });
+      this.updateHoverCheckerWidth();
     });
     checker.addEventListener("mouseleave", () => this.hideSidebar());
 
@@ -406,7 +409,14 @@ const App = {
     sb.style.animationName = "out";
     sb.style.visibility = "hidden";
     document.getElementById("fontsidebar").style.visibility = "hidden";
-    Object.assign(checker.style, { width: "1.3vw", height: "13em" });
+    this.updateHoverCheckerWidth();
+  },
+
+  updateHoverCheckerWidth() {
+    const checker = document.getElementById("hoverchecker");
+    const fontSidebar = document.getElementById("fontsidebar");
+    const isFontOpen = fontSidebar.style.visibility === "visible";
+    Object.assign(checker.style, { width: isFontOpen ? "40vw" : "1.4vw", height: "13em" });
   },
 
   toggleBlur() {
