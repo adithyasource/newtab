@@ -259,34 +259,57 @@ const App = {
   },
 
   async exportData() {
-    if (!this.state.settings.authToken) {
-      this.showNotification("login to export data");
-      return;
-    }
-
     this.showNotification("exporting data...");
     try {
-      const res = await fetch(`${this.config.CLOUD_API_ROOT}/api/export-data`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${this.state.settings.authToken}` },
-      });
+      if (this.state.settings.authToken) {
+        // Logged in: fetch from server as zip
+        const res = await fetch(`${this.config.CLOUD_API_ROOT}/api/export-data`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${this.state.settings.authToken}` },
+        });
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        this.showNotification(`export failed: ${err.error || "unknown error"}`);
-        return;
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          this.showNotification(`export failed: ${err.error || "unknown error"}`);
+          return;
+        }
+
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        const date = new Date().toISOString().slice(0, 10);
+        a.download = `newtab-backup-${date}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } else {
+        // Logged out: export local data as JSON (no images)
+        const exportData = {
+          textareaValue: this.state.textareaValue,
+          stickyNotes: this.state.stickyNotes,
+          settings: {
+            isBlur: this.state.settings.isBlur,
+            isDarkMode: this.state.settings.isDarkMode,
+            showStickies: this.state.settings.showStickies,
+            fontIndex: this.state.settings.fontIndex,
+          },
+          exportedAt: new Date().toISOString(),
+          note: "images not included in offline export - login to export with images",
+        };
+
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        const date = new Date().toISOString().slice(0, 10);
+        a.download = `newtab-backup-${date}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
       }
-
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      const date = new Date().toISOString().slice(0, 10);
-      a.download = `newtab-backup-${date}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
       this.showNotification("data exported");
     } catch (e) {
       console.error("Export failed", e);
@@ -295,23 +318,145 @@ const App = {
   },
 
   importData() {
-    if (!this.state.settings.authToken) {
-      this.showNotification("login to import data");
-      return;
-    }
-
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = ".zip,application/zip";
+    input.accept = ".zip,application/zip,.json,application/json";
+
     input.addEventListener("change", (e) => {
       const file = e.target.files[0];
       if (!file) return;
 
-      // Show confirmation before replacing data
-      this.renderImportConfirmUI(file);
+      if (this.state.settings.authToken) {
+        // Logged in: show confirmation for zip import
+        if (file.name.endsWith(".zip")) {
+          this.renderImportConfirmUI(file);
+        } else {
+          // JSON file while logged in - treat as local-only import
+          this.renderOfflineImportConfirmUI(file);
+        }
+      } else {
+        // Logged out: show confirmation for offline import
+        this.renderOfflineImportConfirmUI(file);
+      }
     });
 
     input.click();
+  },
+
+  renderOfflineImportConfirmUI(file) {
+    const ta = document.getElementById("textarea");
+
+    // Hide sidebar and sticky notes
+    const hoverChecker = document.getElementById("hoverchecker");
+    if (hoverChecker) hoverChecker.style.display = "none";
+    document.querySelectorAll(".sticky-note").forEach((el) => {
+      el.style.display = "none";
+    });
+
+    // Force unblur so the user can see the confirmation message
+    const wasBlurred = this.state.settings.isBlur;
+    if (wasBlurred) {
+      this.state.settings.isBlur = false;
+      ta.classList.remove("blur");
+    }
+
+    // Clear textarea temporarily and insert confirmation UI
+    ta.innerHTML = "";
+    const wrapper = document.createElement("div");
+    wrapper.contentEditable = "false";
+    wrapper.className = "conflict-confirm";
+
+    wrapper.innerHTML = `
+      <span>data conflict: importing will replace all your current data (no images will be imported). continue?</span>
+      <div style="display: flex; gap: 8px;">
+        <button id="replace-data"><u>replace data</u></button>
+        <button id="cancel-import"><u>cancel</u></button>
+      </div>
+    `;
+
+    ta.appendChild(wrapper);
+
+    const restoreUI = () => {
+      if (hoverChecker) hoverChecker.style.display = "";
+      // applyStateToUI will handle re-showing stickies and restoring textarea content
+    };
+
+    wrapper.querySelector("#replace-data").onclick = async () => {
+      restoreUI();
+      await this.processOfflineImport(file);
+    };
+
+    wrapper.querySelector("#cancel-import").onclick = () => {
+      restoreUI();
+      this.applyStateToUI();
+      this.showNotification("import cancelled");
+    };
+  },
+
+  async processOfflineImport(file) {
+    this.showNotification("importing data...");
+    try {
+      let importedData;
+
+      if (file.name.endsWith(".zip")) {
+        // Extract data.json from zip
+        const zip = await JSZip.loadAsync(file);
+
+        // Extract data.json
+        const dataFile = zip.file("data.json");
+        if (!dataFile) {
+          this.showNotification("invalid backup file: missing data.json");
+          return;
+        }
+
+        const text = await dataFile.async("text");
+        importedData = JSON.parse(text);
+        // Images in the zip are ignored when offline
+      } else {
+        // JSON file
+        const text = await file.text();
+        importedData = JSON.parse(text);
+      }
+
+      // Validate structure
+      if (!importedData || (typeof importedData !== "object" && !Array.isArray(importedData))) {
+        this.showNotification("invalid backup file");
+        return;
+      }
+
+      // Strip any image URLs from textarea and sticky notes since we're offline
+      const stripImages = (html) => {
+        if (!html) return html;
+        const temp = document.createElement("div");
+        temp.innerHTML = html;
+        temp.querySelectorAll("img").forEach((img) => img.remove());
+        return temp.innerHTML;
+      };
+
+      // Merge imported data with current state, preserving auth credentials
+      this.state.textareaValue = stripImages(importedData.textareaValue) || this.state.textareaValue;
+      this.state.stickyNotes = (importedData.stickyNotes || []).map((note) => ({
+        ...note,
+        content: stripImages(note.content),
+      }));
+
+      if (importedData.settings) {
+        this.state.settings = {
+          ...this.state.settings,
+          isBlur: importedData.settings.isBlur ?? this.state.settings.isBlur,
+          isDarkMode: importedData.settings.isDarkMode ?? this.state.settings.isDarkMode,
+          showStickies: importedData.settings.showStickies ?? this.state.settings.showStickies,
+          fontIndex: importedData.settings.fontIndex ?? this.state.settings.fontIndex,
+        };
+      }
+
+      await this.saveLocal(false);
+      this.applyStateToUI();
+      this.showNotification("data imported (images removed)");
+    } catch (e) {
+      console.error("Import failed", e);
+      this.showNotification("import failed: invalid file");
+    }
   },
 
   renderImportConfirmUI(file) {
