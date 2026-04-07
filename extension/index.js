@@ -14,7 +14,7 @@ const App = {
     },
     stats: {
       count: 0,
-      limit: 100,
+      limit: 15,
     },
   },
 
