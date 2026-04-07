@@ -18,6 +18,8 @@ const App = {
     },
   },
 
+  isUploading: false,
+
   config: {
     STORAGE_KEY: "newtab_data",
     // CLOUD_API_ROOT: "http://localhost:3000",
@@ -33,7 +35,7 @@ const App = {
 
     if (this.state.settings.authToken) {
       this.fetchStatus();
-      // Instantly try to pull from cloud on refresh/open
+      // instantly try to pull from cloud on refresh/open
       chrome.runtime.sendMessage({ type: "FORCE_SYNC" });
     }
   },
@@ -318,6 +320,10 @@ const App = {
   },
 
   importData() {
+    if (this.isUploading) {
+      this.showNotification("please wait for the current upload to finish");
+      return;
+    }
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".zip,application/zip,.json,application/json";
@@ -505,7 +511,12 @@ const App = {
   },
 
   async processImport(file) {
+    if (this.isUploading) {
+      this.showNotification("please wait for the current upload to finish");
+      return;
+    }
     this.showNotification("importing data...");
+    this.isUploading = true;
     try {
       const formData = new FormData();
       formData.append("zip", file);
@@ -541,11 +552,13 @@ const App = {
         };
         await this.saveLocal(false);
         this.applyStateToUI();
-        this.fetchStatus();
+        await this.fetchStatus();
       }
     } catch (e) {
       console.error("Import failed", e);
       this.showNotification("import failed");
+    } finally {
+      this.isUploading = false;
     }
   },
 
@@ -706,10 +719,10 @@ const App = {
       }
     });
 
-    document.addEventListener("visibilitychange", () => {
+    document.addEventListener("visibilitychange", async () => {
       if (document.visibilityState === "visible") {
         chrome.runtime.sendMessage({ type: "FORCE_SYNC" });
-        if (this.state.settings.authToken) this.fetchStatus();
+        if (this.state.settings.authToken) await this.fetchStatus();
       }
     });
   },
@@ -861,55 +874,59 @@ const App = {
 
   attachEvents(el) {
     el.addEventListener("paste", async (e) => {
+      const item = e.clipboardData.items[0]; // only considering first item
+
+      if (item.type === "text/plain") {
+        return;
+      }
+
       e.preventDefault();
-      const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-      for (const item of items) {
-        if (item.type.includes("image")) {
-          if (this.state.settings.authToken && this.state.stats.count >= this.state.stats.limit) {
-            this.showNotification("image limit reached! delete some images first.");
-            continue;
-          }
-          const blob = item.getAsFile();
-          if (this.state.settings.authToken) {
-            if (this.state.stats.count >= this.state.stats.limit) {
-              this.showNotification("image limit reached! delete some images first.");
-              continue;
-            }
-            this.showNotification("uploading...");
-            const fd = new FormData();
-            fd.append("image", blob);
-            try {
-              const res = await fetch(`${this.config.CLOUD_API_ROOT}/api/upload`, {
-                method: "POST",
-                headers: { Authorization: `Bearer ${this.state.settings.authToken}` },
-                body: fd,
-              });
-              if (res.ok) {
-                const { url } = await res.json();
-                document.execCommand("insertImage", false, url);
-                this.showNotification("uploaded");
-                this.fetchStatus();
-              } else {
-                const errData = await res.json().catch(() => ({}));
-                this.showNotification(errData.error || "upload failed");
-              }
-            } catch (_err) {
-              this.showNotification("upload failed");
-            }
-          } else {
-            this.showNotification("login to paste images");
-          }
-        } else if (item.type === "text/plain") {
-          item.getAsString((t) => {
-            const html = t
-              .replace(/&/g, "&amp;")
-              .replace(/</g, "&lt;")
-              .replace(/>/g, "&gt;")
-              .replace(/\t/g, "&emsp;")
-              .replace(/ {2}/g, "&nbsp;&nbsp;")
-              .replace(/\n/g, "<br>");
-            document.execCommand("insertHTML", false, html);
+
+      if (this.isUploading) {
+        this.showNotification("please wait for the current upload to finish");
+        return;
+      }
+
+      if (!this.state.settings.authToken) {
+        this.showNotification("login to paste images");
+        return;
+      }
+
+      if (this.state.settings.authToken && this.state.stats.count >= this.state.stats.limit) {
+        this.showNotification("image limit reached! delete some images first.");
+        return;
+      }
+
+      const blob = item.getAsFile();
+      if (this.state.settings.authToken) {
+        if (this.state.stats.count >= this.state.stats.limit) {
+          this.showNotification("image limit reached! delete some images first.");
+          return;
+        }
+        this.showNotification("uploading...");
+        this.isUploading = true;
+        const fd = new FormData();
+        fd.append("image", blob);
+        try {
+          const res = await fetch(`${this.config.CLOUD_API_ROOT}/api/upload`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${this.state.settings.authToken}` },
+            body: fd,
           });
+          if (res.ok) {
+            const { url } = await res.json();
+            document.execCommand("insertImage", false, url);
+            this.showNotification("uploaded");
+            await this.fetchStatus();
+            chrome.runtime.sendMessage({ type: "FORCE_SYNC" });
+          } else {
+            const errData = await res.json().catch(() => ({}));
+            this.showNotification(errData.error || "upload failed");
+          }
+        } catch (_err) {
+          this.showNotification("upload failed");
+        } finally {
+          this.isUploading = false;
         }
       }
     });
@@ -1061,7 +1078,7 @@ const App = {
         body: JSON.stringify({ url }),
       });
       this.showNotification("image deleted from cloud");
-      this.fetchStatus();
+      await this.fetchStatus();
     } catch (e) {
       console.error("failed to delete image from cloud", e);
     }

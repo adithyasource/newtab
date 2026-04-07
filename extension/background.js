@@ -8,14 +8,6 @@ const CONFIG = {
   DEBOUNCE_DELAY_MS: 3000,
 };
 
-/**
- * State Management:
- * - lastUpdated: When the user last edited the data (in any tab).
- * - lastSyncedAt: The lastUpdated value that was successfully pushed to or pulled from the cloud.
- *
- * If lastUpdated > lastSyncedAt: We have local changes that need to be pushed.
- */
-
 async function getLocal() {
   const res = await chrome.storage.local.get([CONFIG.STORAGE_KEY]);
   return res[CONFIG.STORAGE_KEY];
@@ -36,10 +28,10 @@ async function syncEngine() {
 
     if (!res.ok) {
       if (res.status === 401) {
-        console.error("Auth token expired, stopping sync.");
+        console.error("auth token expired, stopping sync.");
         return;
       }
-      throw new Error(`Cloud load failed: ${res.status}`);
+      throw new Error(`cloud load failed: ${res.status}`);
     }
 
     let cloud = await res.json();
@@ -55,15 +47,15 @@ async function syncEngine() {
     const localLastUpdated = local.lastUpdated || 0;
     const lastSyncedAt = local.lastSyncedAt || 0;
 
-    // --- CASE 1: Cloud is newer than (or equal to) local ---
-    // We allow equal to handle cases where a pull might have been triggered
+    // CASE 1: cloud is newer than (or equal to) local
+    // we allow equal to handle cases where a pull might have been triggered
     // but we want to ensure local state is perfectly aligned with cloud.
     if (cloudLastUpdated >= localLastUpdated) {
       if (cloudLastUpdated === localLastUpdated && local.lastSyncedAt === cloudLastUpdated) {
         console.log("Sync: Already in sync.");
         return;
       }
-      console.log("Sync: Cloud is newer or equal. Updating local cache.");
+      console.log("sync: cloud is newer or equal. updating local cache.");
       const merged = {
         ...cloud,
         lastUpdated: cloudLastUpdated,
@@ -76,27 +68,27 @@ async function syncEngine() {
       };
       await setLocal(merged);
     }
-    // --- CASE 2: Local is newer than last sync ---
+    // CASE 2: local is newer than last sync
     else if (localLastUpdated > lastSyncedAt) {
-      console.log("Sync: Local has unsynced changes. Pushing to cloud.");
+      console.log("sync: local has unsynced changes. pushing to cloud.");
       await pushToCloud(local);
     }
-    // --- CASE 3: No changes needed ---
+    // CASE 3: no changes needed
     else {
-      console.log("Sync: Everything up to date.");
+      console.log("sync: everything up to date.");
     }
   } catch (e) {
-    console.error("Sync Engine Error:", e);
+    console.error("sync engine error:", e);
   }
 }
 
 async function pushToCloud(data) {
   if (!data.settings?.authToken) {
-    console.log("Push: Aborted. No authToken.");
+    console.log("push: aborted. no authtoken.");
     return;
   }
 
-  console.log("Push: Starting fetch to /api/save...");
+  console.log("push: starting fetch to /api/save...");
   try {
     const res = await fetch(`${CONFIG.CLOUD_API_ROOT}/api/save`, {
       method: "POST",
@@ -115,14 +107,13 @@ async function pushToCloud(data) {
       chrome.runtime.sendMessage({ type: "CLOUD_SYNCED" }).catch(() => {});
     } else {
       const errorText = await res.text();
-      console.error(`Push: HTTP Error ${res.status}: ${errorText}`);
+      console.error(`push: http error ${res.status}: ${errorText}`);
     }
   } catch (e) {
-    console.error("Push: Network Error during fetch.", e);
+    console.error("push: network error during fetch.", e);
   }
 }
 
-// 1. Listen for storage changes to detect user edits
 chrome.storage.onChanged.addListener(async (changes, areaName) => {
   if (areaName === "local" && changes[CONFIG.STORAGE_KEY]) {
     const newState = changes[CONFIG.STORAGE_KEY].newValue;
@@ -130,7 +121,7 @@ chrome.storage.onChanged.addListener(async (changes, areaName) => {
 
     if (!newState) return;
 
-    // If authToken just appeared (login), run a full sync immediately
+    // if authtoken just appeared (login), run a full sync immediately
     if (newState.settings?.authToken && !oldState?.settings?.authToken) {
       syncEngine();
       return;
@@ -143,6 +134,9 @@ chrome.storage.onChanged.addListener(async (changes, areaName) => {
 
     if (lastUpdated > lastSyncedAt) {
       console.log("User change detected. Scheduling debounced push.");
+
+      await chrome.alarms.clear(CONFIG.DEBOUNCE_ALARM_NAME);
+
       chrome.alarms.create(CONFIG.DEBOUNCE_ALARM_NAME, {
         when: Date.now() + CONFIG.DEBOUNCE_DELAY_MS,
       });
@@ -150,7 +144,8 @@ chrome.storage.onChanged.addListener(async (changes, areaName) => {
   }
 });
 
-// 2. Handle alarms (periodic sync + debounced push)
+// syncing
+
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === CONFIG.SYNC_ALARM_NAME) {
     syncEngine();
@@ -159,23 +154,21 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   }
 });
 
-// 3. Message listener for force sync requests (e.g. manual save)
-chrome.runtime.onMessage.addListener((msg) => {
-  if (msg.type === "FORCE_SYNC") {
-    syncEngine();
-  }
-});
-
-// 4. Set up periodic sync alarm
 chrome.alarms.create(CONFIG.SYNC_ALARM_NAME, {
   periodInMinutes: CONFIG.SYNC_INTERVAL_MINUTES,
 });
 
-// 5. Initial sync on startup/install
 chrome.runtime.onInstalled.addListener(() => {
   syncEngine();
 });
 
 chrome.runtime.onStartup.addListener(() => {
   syncEngine();
+});
+
+// initial force
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg.type === "FORCE_SYNC") {
+    syncEngine();
+  }
 });
