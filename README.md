@@ -13,7 +13,7 @@ a boring browser extension for taking down notes \
 syncs across all your devices
 
 
-<img width="1431" height="979" alt="image" src="https://github.com/user-attachments/assets/385756bf-707a-4029-9afd-0332fdd6edae" />
+<img width="1779" height="1184" alt="Group 13" src="https://github.com/user-attachments/assets/a1b17eee-9547-4aa0-a677-2be21c6d27f6" />
 
 
 do let me know of any bugs and i'd love to work on fixing them
