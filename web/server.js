@@ -1,10 +1,16 @@
-import { Redis } from "@upstash/redis";
-import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
-import sharp from "sharp";
-import jwt from "jsonwebtoken";
-import axios from "axios";
 import path from "node:path";
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  ListObjectsV2Command,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
+import { Redis } from "@upstash/redis";
+import axios from "axios";
+import jwt from "jsonwebtoken";
 import JSZip from "jszip";
+import sharp from "sharp";
 
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL,
@@ -20,7 +26,15 @@ const s3 = new S3Client({
   },
 });
 
-const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI, JWT_SECRET, EXTENSION_ID, R2_BUCKET_NAME, R2_PUBLIC_DOMAIN } = process.env;
+const {
+  GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET,
+  GOOGLE_REDIRECT_URI,
+  JWT_SECRET,
+  EXTENSION_ID,
+  R2_BUCKET_NAME,
+  R2_PUBLIC_DOMAIN,
+} = process.env;
 
 const requiredEnv = [
   "UPSTASH_REDIS_REST_URL",
@@ -34,7 +48,7 @@ const requiredEnv = [
   "R2_ACCESS_KEY_ID",
   "R2_SECRET_ACCESS_KEY",
   "R2_BUCKET_NAME",
-  "R2_PUBLIC_DOMAIN"
+  "R2_PUBLIC_DOMAIN",
 ];
 
 for (const env of requiredEnv) {
@@ -53,24 +67,24 @@ const corsHeaders = {
 const server = Bun.serve({
   port: process.env.PORT || 3000,
   hostname: "0.0.0.0",
+
   async fetch(req) {
     const url = new URL(req.url);
     const pathname = url.pathname;
 
-    // Handle CORS preflight
+    // cors preflight
     if (req.method === "OPTIONS") {
       return new Response(null, { headers: corsHeaders, status: 204 });
     }
 
     try {
-      // 1. Auth: Google login redirect
+      // AUTH
       if (pathname === "/auth/google") {
         const state = url.searchParams.get("state");
         const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(GOOGLE_REDIRECT_URI)}&response_type=code&scope=email profile&access_type=offline&prompt=consent&state=${encodeURIComponent(state)}`;
         return Response.redirect(authUrl);
       }
 
-      // 2. Auth: Google callback
       if (pathname === "/auth/callback") {
         const code = url.searchParams.get("code");
         const state = url.searchParams.get("state");
@@ -92,11 +106,12 @@ const server = Bun.serve({
         });
 
         const token = jwt.sign({ email: user.email, name: user.name }, JWT_SECRET);
+        // https://developer.chrome.com/docs/extensions/reference/api/identity#method-launchWebAuthFlow
         const extUrl = state || `https://${EXTENSION_ID}.chromiumapp.org/`;
         return Response.redirect(`${extUrl}?token=${token}`);
       }
 
-      // 3. API Routes
+      // MAIN
       if (pathname === "/api" || pathname === "/api/") {
         return Response.json({ status: "ok", message: "newtab api is running" }, { headers: corsHeaders });
       }
@@ -110,13 +125,12 @@ const server = Bun.serve({
         let payload;
         try {
           payload = jwt.verify(auth.split(" ")[1], JWT_SECRET);
-        } catch (e) {
+        } catch (_e) {
           return Response.json({ error: "bad token" }, { status: 401, headers: corsHeaders });
         }
 
         const key = `user:${payload.email}:data`;
 
-        // Save data
         if (pathname === "/api/save" && req.method === "POST") {
           const body = await req.json();
           if (!body) return Response.json({ error: "missing body" }, { status: 400, headers: corsHeaders });
@@ -125,26 +139,29 @@ const server = Bun.serve({
           return Response.json({ ok: true }, { headers: corsHeaders });
         }
 
-        // Load data
         if (pathname === "/api/load") {
           const data = await redis.get(key);
           let parsed = data || {};
           if (typeof data === "string") {
-            try { parsed = JSON.parse(data); } catch (e) { parsed = {}; }
+            try {
+              parsed = JSON.parse(data);
+            } catch (_e) {
+              parsed = {};
+            }
           }
           return Response.json(parsed, { headers: corsHeaders });
         }
 
-        // Image status
+        // get image count and limit
         if (pathname === "/api/status") {
           const countKey = `user:${payload.email}:image_count`;
           const limitKey = `user:${payload.email}:image_limit`;
-          const count = parseInt(await redis.get(countKey)) || 0;
-          const limit = parseInt(await redis.get(limitKey)) || 15;
+          const count = Number.parseInt(await redis.get(countKey), 10) || 0;
+          const limit = Number.parseInt(await redis.get(limitKey), 10) || 15;
           return Response.json({ count, limit }, { headers: corsHeaders });
         }
 
-        // Upload image
+        // upload image
         if (pathname === "/api/upload" && req.method === "POST") {
           const formData = await req.formData();
           const file = formData.get("image");
@@ -155,8 +172,8 @@ const server = Bun.serve({
 
           const countKey = `user:${payload.email}:image_count`;
           const limitKey = `user:${payload.email}:image_limit`;
-          const count = parseInt(await redis.get(countKey)) || 0;
-          const limit = parseInt(await redis.get(limitKey)) || 15;
+          const count = Number.parseInt(await redis.get(countKey), 10) || 0;
+          const limit = Number.parseInt(await redis.get(limitKey), 10) || 15;
 
           if (count >= limit) {
             return new Response("limit exceeded", { status: 400, headers: corsHeaders });
@@ -169,19 +186,21 @@ const server = Bun.serve({
             .toBuffer();
 
           const name = `${payload.email}/${Date.now()}.jpg`;
-          await s3.send(new PutObjectCommand({
-            Bucket: R2_BUCKET_NAME,
-            Key: name,
-            Body: buf,
-            ContentType: "image/jpeg",
-          }));
+          await s3.send(
+            new PutObjectCommand({
+              Bucket: R2_BUCKET_NAME,
+              Key: name,
+              Body: buf,
+              ContentType: "image/jpeg",
+            }),
+          );
 
           await redis.incr(countKey);
 
           return Response.json({ url: `${R2_PUBLIC_DOMAIN}/${name}` }, { headers: corsHeaders });
         }
 
-        // Delete image
+        // delete image
         if (pathname === "/api/delete-image" && req.method === "POST") {
           const { url: imageUrl } = await req.json();
           if (!imageUrl) return new Response("missing url", { status: 400, headers: corsHeaders });
@@ -194,10 +213,12 @@ const server = Bun.serve({
               return new Response("forbidden", { status: 403, headers: corsHeaders });
             }
 
-            await s3.send(new DeleteObjectCommand({
-              Bucket: R2_BUCKET_NAME,
-              Key: fileKey,
-            }));
+            await s3.send(
+              new DeleteObjectCommand({
+                Bucket: R2_BUCKET_NAME,
+                Key: fileKey,
+              }),
+            );
 
             const countKey = `user:${payload.email}:image_count`;
             await redis.decr(countKey);
@@ -207,28 +228,34 @@ const server = Bun.serve({
           return new Response("invalid url", { status: 400, headers: corsHeaders });
         }
 
-        // Export data as zip
+        // export data as zip
         if (pathname === "/api/export-data" && req.method === "POST") {
           const data = await redis.get(key);
           let parsed = data || {};
           if (typeof data === "string") {
-            try { parsed = JSON.parse(data); } catch (e) { parsed = {}; }
+            try {
+              parsed = JSON.parse(data);
+            } catch (_e) {
+              parsed = {};
+            }
           }
 
           const zip = new JSZip();
           const imagesFolder = zip.folder("images");
 
-          // Extract all image URLs from textareaValue and stickyNotes content
+          // CHECKING FOR IMAGES
+
+          // extract all image urls from textareavalue and stickynotes content
           const imageUrls = new Set();
           const urlRegex = /https?:\/\/[^"'\s]+\.(?:jpg|jpeg|png|gif|webp|svg|bmp|ico)/gi;
 
-          // Check textareaValue
+          // check textareavalue
           if (parsed.textareaValue) {
             const matches = parsed.textareaValue.match(urlRegex) || [];
             for (const u of matches) imageUrls.add(u);
           }
 
-          // Check sticky notes
+          // check sticky notes
           if (Array.isArray(parsed.stickyNotes)) {
             for (const note of parsed.stickyNotes) {
               if (note.content) {
@@ -238,7 +265,7 @@ const server = Bun.serve({
             }
           }
 
-          // Download images from R2 and add to zip, rewrite URLs
+          // download images from r2 and add to zip, rewrite urls
           let imageIndex = 0;
           const urlToLocalMap = {};
 
@@ -257,10 +284,12 @@ const server = Bun.serve({
             }
 
             try {
-              const response = await s3.send(new GetObjectCommand({
-                Bucket: R2_BUCKET_NAME,
-                Key: fileKey,
-              }));
+              const response = await s3.send(
+                new GetObjectCommand({
+                  Bucket: R2_BUCKET_NAME,
+                  Key: fileKey,
+                }),
+              );
 
               const buffer = await response.Body.transformToByteArray();
               const ext = path.extname(fileKey) || ".jpg";
@@ -269,11 +298,11 @@ const server = Bun.serve({
               urlToLocalMap[imageUrl] = `./images/${localName}`;
               imageIndex++;
             } catch (e) {
-              console.error(`Failed to download image ${fileKey}:`, e);
+              console.error(`failed to download image ${fileKey}:`, e);
             }
           }
 
-          // Rewrite image URLs in the data
+          // rewrite image urls in the data
           if (parsed.textareaValue) {
             for (const [remoteUrl, localPath] of Object.entries(urlToLocalMap)) {
               parsed.textareaValue = parsed.textareaValue.replaceAll(remoteUrl, localPath);
@@ -289,7 +318,7 @@ const server = Bun.serve({
             }
           }
 
-          // Strip auth credentials and sync timestamps
+          // strip auth credentials and sync timestamps
           const { authToken, userEmail, lastSyncedAt, ...exportData } = parsed;
           exportData.settings = { ...(parsed.settings || {}) };
           delete exportData.settings.authToken;
@@ -310,7 +339,7 @@ const server = Bun.serve({
           });
         }
 
-        // Import data from zip
+        // import data from zip
         if (pathname === "/api/import-data" && req.method === "POST") {
           const formData = await req.formData();
           const file = formData.get("zip");
@@ -330,40 +359,45 @@ const server = Bun.serve({
 
           const importedData = JSON.parse(await dataJson.async("string"));
 
-          // Count images in the zip
+          // count images in the zip
           const imagesFolder = zip.folder("images");
-          const imageFileEntries = imagesFolder
-            ? Object.entries(imagesFolder.files).filter(([, f]) => !f.dir)
-            : [];
+          const imageFileEntries = imagesFolder ? Object.entries(imagesFolder.files).filter(([, f]) => !f.dir) : [];
           const imageFiles = imageFileEntries.map(([fullPath, _f]) => {
             // fullPath is like "images/image_0.jpg", extract just the filename
             return fullPath.replace(/^images\//, "");
           });
-          const limit = parseInt(await redis.get(`user:${payload.email}:image_limit`)) || 15;
+          const limit = Number.parseInt(await redis.get(`user:${payload.email}:image_limit`), 10) || 15;
 
-          // Reject if the zip alone has more images than the limit
+          // reject if the zip alone has more images than the limit
           if (imageFiles.length > limit) {
-            return Response.json({
-              error: `too many images in backup: ${imageFiles.length} exceeds the limit of ${limit}`,
-            }, { status: 400, headers: corsHeaders });
+            return Response.json(
+              {
+                error: `too many images in backup: ${imageFiles.length} exceeds the limit of ${limit}`,
+              },
+              { status: 400, headers: corsHeaders },
+            );
           }
 
-          // Delete all existing images for this user before importing
+          // delete all existing images for this user before importing
           const countKey = `user:${payload.email}:image_count`;
-          const currentCount = parseInt(await redis.get(countKey)) || 0;
+          const currentCount = Number.parseInt(await redis.get(countKey), 10) || 0;
           if (currentCount > 0) {
             try {
-              const listResponse = await s3.send(new ListObjectsV2Command({
-                Bucket: R2_BUCKET_NAME,
-                Prefix: `${payload.email}/`,
-              }));
+              const listResponse = await s3.send(
+                new ListObjectsV2Command({
+                  Bucket: R2_BUCKET_NAME,
+                  Prefix: `${payload.email}/`,
+                }),
+              );
 
               if (listResponse.Contents && listResponse.Contents.length > 0) {
                 for (const obj of listResponse.Contents) {
-                  await s3.send(new DeleteObjectCommand({
-                    Bucket: R2_BUCKET_NAME,
-                    Key: obj.Key,
-                  }));
+                  await s3.send(
+                    new DeleteObjectCommand({
+                      Bucket: R2_BUCKET_NAME,
+                      Key: obj.Key,
+                    }),
+                  );
                 }
               }
             } catch (e) {
@@ -372,7 +406,7 @@ const server = Bun.serve({
             await redis.set(countKey, 0);
           }
 
-          // Upload images to R2 and build URL mapping
+          // upload images to r2 and build url mapping
           const localToRemoteUrlMap = {};
           for (const imageName of imageFiles) {
             const imageFile = zip.file(`images/${imageName}`);
@@ -382,18 +416,20 @@ const server = Bun.serve({
             const ext = path.extname(imageName) || ".jpg";
             const name = `${payload.email}/${Date.now()}_${imageName}`;
 
-            await s3.send(new PutObjectCommand({
-              Bucket: R2_BUCKET_NAME,
-              Key: name,
-              Body: imageBuffer,
-              ContentType: `image/${ext.replace(".", "")}`,
-            }));
+            await s3.send(
+              new PutObjectCommand({
+                Bucket: R2_BUCKET_NAME,
+                Key: name,
+                Body: imageBuffer,
+                ContentType: `image/${ext.replace(".", "")}`,
+              }),
+            );
 
             localToRemoteUrlMap[`./images/${imageName}`] = `${R2_PUBLIC_DOMAIN}/${name}`;
             await redis.incr(`user:${payload.email}:image_count`);
           }
 
-          // Rewrite local image URLs back to cloud URLs
+          // rewrite local image urls back to cloud urls
           if (importedData.textareaValue) {
             for (const [localPath, remoteUrl] of Object.entries(localToRemoteUrlMap)) {
               importedData.textareaValue = importedData.textareaValue.replaceAll(localPath, remoteUrl);
@@ -409,7 +445,7 @@ const server = Bun.serve({
             }
           }
 
-          // Save to Redis - strip any auth credentials from the imported settings
+          // save to redis - strip any auth credentials from the imported settings
           const { authToken: _at, userEmail: _ue, ...safeSettings } = importedData.settings || {};
           await redis.set(key, {
             textareaValue: importedData.textareaValue,
@@ -425,22 +461,20 @@ const server = Bun.serve({
         return Response.json({ error: "not found" }, { status: 404, headers: corsHeaders });
       }
 
-      // 4. Serve Static Files
       const decodedPathname = decodeURIComponent(pathname);
-      let filePath = path.join(process.cwd(), "public", decodedPathname === "/" ? "index.html" : decodedPathname);
+      const filePath = path.join(process.cwd(), "public", decodedPathname === "/" ? "index.html" : decodedPathname);
       const file = Bun.file(filePath);
-      
+
       if (await file.exists()) {
         return new Response(file, {
           headers: {
             ...corsHeaders,
             "Content-Type": file.type,
-          }
+          },
         });
       }
 
       return new Response("Not Found", { status: 404, headers: corsHeaders });
-
     } catch (err) {
       console.error(err);
       return Response.json({ error: err.message }, { status: 500, headers: corsHeaders });
