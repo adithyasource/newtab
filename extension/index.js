@@ -109,7 +109,7 @@ const App = {
       this.state.settings.isBlur = JSON.parse(localStorage.getItem("isBlur")) || false;
       this.state.settings.isDarkMode = JSON.parse(localStorage.getItem("isDarkMode")) || false;
       this.state.settings.showStickies = JSON.parse(localStorage.getItem("showStickies")) ?? true;
-      this.state.settings.fontIndex = Number.parseInt(localStorage.getItem("fontIndex")) || 0;
+      this.state.settings.fontIndex = Number.parseInt(localStorage.getItem("fontIndex"), 10) || 0;
     }
     this.state.lastUpdated = Date.now();
     await this.saveLocal(false);
@@ -823,8 +823,8 @@ const App = {
     this.makeDraggable(el, n);
 
     new ResizeObserver(() => {
-      const w = Number.parseInt(el.style.width);
-      const h = Number.parseInt(el.style.height);
+      const w = Number.parseInt(el.style.width, 10);
+      const h = Number.parseInt(el.style.height, 10);
       if (w !== n.width || h !== n.height) {
         Object.assign(n, { width: w, height: h });
         this.saveLocal();
