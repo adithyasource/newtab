@@ -20,17 +20,17 @@ body {
 p,
 span,
 a {
-  font-size: 24px;
+  font-size: 20px;
   font-family: AppleGaramond;
 }
 
 .bigText {
-  font-size: 38px;
-  font-weight: 600;
+  font-size: 52px;
+  font-weight: 200;
 }
 
 #mainDiv {
-  padding-top: 80px;
+  padding-top: 32px;
   width: 900px;
 }
 
