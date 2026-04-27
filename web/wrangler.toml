@@ -1,4 +1,7 @@
 name = "newtab"
+main = "src/worker.js"
 compatibility_date = "2026-04-27"
 compatibility_flags = ["nodejs_compat"]
-pages_build_output_dir = "public"
+
+[assets]
+directory = "./public"

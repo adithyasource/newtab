@@ -1,4 +1,4 @@
-# Cloudflare Pages setup
+# Cloudflare Cloud deployment setup
 
 ## Local dev
 
@@ -9,23 +9,23 @@ bun run dev
 
 ## Deploy
 
-### Preferred: Cloudflare Pages Git deployment
+This repo now supports both:
 
-In the Cloudflare Pages dashboard, use:
+- **Cloudflare Worker deploys** via `wrangler deploy`
+- **Static assets** from `public/`
 
-- **Framework preset:** `None`
-- **Build command:** `bun run build` or `echo "no build"`
-- **Build output directory:** `public`
+That means if Cloudflare is invoking `wrangler deploy` during deploy, it now has:
 
-Do **not** use `bun run deploy` / `wrangler deploy` as the Pages build command.
+- a Worker entrypoint: `src/worker.js`
+- an assets directory: `public/`
 
-### Optional: manual deploy from your machine
+### Manual deploy from your machine
 
 ```bash
 bun run deploy:manual
 ```
 
-Set these environment variables in Cloudflare Pages:
+Set these environment variables in Cloudflare:
 
 - `UPSTASH_REDIS_REST_URL`
 - `UPSTASH_REDIS_REST_TOKEN`
@@ -43,7 +43,8 @@ Set these environment variables in Cloudflare Pages:
 Notes:
 
 - Static files are served from `public/`.
-- API/auth routes are handled by Hono in `functions/[[path]].js`.
-- The old Bun server is no longer used for Pages deployment.
+- API/auth routes are handled by Hono in `src/app.js`.
+- `src/worker.js` is the Wrangler/Worker entrypoint.
+- `functions/[[path]].js` is still fine for Pages-style routing, but deploys that use `wrangler deploy` will use the Worker entrypoint instead.
+- The old Bun server is no longer used for Cloudflare deployment.
 - `sharp` was removed because Cloudflare Pages/Workers does not support that native Bun/Node image pipeline. Uploads are now stored as-is.
-- `wrangler.toml` is only for local/manual Wrangler usage and compatibility settings; Git-based Pages deploys should rely on the dashboard build settings above.
