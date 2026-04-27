@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "wrangler pages dev public --compatibility-date=2026-04-27",
     "start": "wrangler pages dev public --compatibility-date=2026-04-27",
-    "deploy": "wrangler pages deploy public"
+    "build": "echo 'Cloudflare Pages uses public/ as-is; no build step required.'",
+    "deploy:manual": "wrangler pages deploy public"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.515.0",
