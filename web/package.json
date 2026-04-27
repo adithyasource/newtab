@@ -3,17 +3,20 @@
   "version": "1.0.0",
   "description": "Backend for newtab extension",
   "type": "module",
-  "main": "server.js",
+  "main": "functions/[[path]].js",
   "scripts": {
-    "dev": "bun --watch server.js",
-    "start": "bun server.js"
+    "dev": "wrangler pages dev public --compatibility-date=2026-04-27",
+    "start": "wrangler pages dev public --compatibility-date=2026-04-27",
+    "deploy": "wrangler pages deploy public"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.515.0",
     "@upstash/redis": "^1.28.4",
     "axios": "^1.6.7",
-    "jszip": "^3.10.1",
-    "jsonwebtoken": "^9.0.2",
-    "sharp": "^0.33.2"
+    "hono": "^4.8.2",
+    "jszip": "^3.10.1"
+  },
+  "devDependencies": {
+    "wrangler": "^4.12.0"
   }
 }
